@@ -1,0 +1,23 @@
+--- a/ath10k-5.8/mac.c
++++ b/ath10k-5.8/mac.c
+@@ -1662,8 +1662,7 @@ static void ath10k_recalc_radar_detectio
+ 		 * radiation is not allowed, make this channel DFS_UNAVAILABLE
+ 		 * by indicating that radar was detected.
+ 		 */
+-		ath10k_warn(ar, "failed to start CAC: %d\n", ret);
+-		ieee80211_radar_detected(ar->hw);
++		ath10k_info(ar, "failed to start CAC: %d\n", ret);
+ 	}
+ }
+ 
+--- a/ath10k-5.8/wmi.c
++++ b/ath10k-5.8/wmi.c
+@@ -4343,7 +4343,7 @@ static void ath10k_radar_detected(struct
+ 	if (ar->dfs_block_radar_events)
+ 		ath10k_info(ar, "DFS Radar detected, but ignored as requested\n");
+ 	else
+-		ieee80211_radar_detected(ar->hw);
++		ath10k_info(ar, "DFS radar ignored\n");
+ }
+ 
+ static void ath10k_radar_confirmation_work(struct work_struct *work)
