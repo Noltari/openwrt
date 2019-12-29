@@ -1,0 +1,13 @@
+--- a/video/out/opengl/egl_helpers.c
++++ b/video/out/opengl/egl_helpers.c
+@@ -44,6 +44,10 @@
+ #define EGL_OPENGL_ES3_BIT                      0x00000040
+ #endif
+ 
++#ifndef EGLAttrib
++typedef intptr_t EGLAttrib;
++#endif /* EGLAttrib */
++
+ struct mp_egl_config_attr {
+     int attrib;
+     const char *name;
