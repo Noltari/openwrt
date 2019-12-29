@@ -1,0 +1,8 @@
+create libffmpeg-omx.a
+addlib libavutil.a
+addlib libavcodec.a
+addlib libavformat.a
+addlib libswscale.a
+addlib libswresample.a
+save
+end
