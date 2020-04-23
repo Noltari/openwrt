@@ -1,0 +1,95 @@
+--- a/drivers/pinctrl/bcm63xx/Kconfig
++++ b/drivers/pinctrl/bcm63xx/Kconfig
+@@ -3,28 +3,28 @@ config PINCTRL_BCM63XX
+ 	select GPIO_GENERIC
+ 
+ config PINCTRL_BCM6318
+-	bool "BCM6318 pincontrol driver" if COMPILE_TEST
++	bool "BCM6318 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+ 	select GENERIC_PINCONF
+ 
+ config PINCTRL_BCM6328
+-	bool "BCM6328 pincontrol driver" if COMPILE_TEST
++	bool "BCM6328 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+ 	select GENERIC_PINCONF
+ 
+ config PINCTRL_BCM6348
+-	bool "BCM6348 pincontrol driver" if COMPILE_TEST
++	bool "BCM6348 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+ 	select GENERIC_PINCONF
+ 
+ config PINCTRL_BCM6358
+-	bool "BCM6358 pincontrol driver" if COMPILE_TEST
++	bool "BCM6358 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+@@ -32,14 +32,14 @@ config PINCTRL_BCM6358
+ 	select MFD_SYSCON
+ 
+ config PINCTRL_BCM6362
+-	bool "BCM6362 pincontrol driver" if COMPILE_TEST
++	bool "BCM6362 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+ 	select GENERIC_PINCONF
+ 
+ config PINCTRL_BCM6368
+-	bool "BCM6368 pincontrol driver" if COMPILE_TEST
++	bool "BCM6368 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+@@ -47,7 +47,7 @@ config PINCTRL_BCM6368
+ 	select MFD_SYSCON
+ 
+ config PINCTRL_BCM63268
+-	bool "BCM63268 pincontrol driver" if COMPILE_TEST
++	bool "BCM63268 pincontrol driver"
+ 	select PINMUX
+ 	select PINCONF
+ 	select PINCTRL_BCM63XX
+--- a/drivers/pinctrl/bcm63xx/pinctrl-bcm6358.c
++++ b/drivers/pinctrl/bcm63xx/pinctrl-bcm6358.c
+@@ -339,12 +339,8 @@ static int bcm6358_pinctrl_probe(struct
+ 	struct regmap *mode;
+ 	struct reg_field overlays = REG_FIELD(0, 0, 15);
+ 
+-	if (pdev->dev.of_node)
+-		mode = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
+-						       "brcm,gpiomode");
+-	else
+-		mode = syscon_regmap_lookup_by_pdevname("syscon.fffe0098");
+-
++	mode = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
++					       "brcm,gpiomode");
+ 	if (IS_ERR(mode))
+ 		return PTR_ERR(mode);
+ 
+--- a/drivers/pinctrl/bcm63xx/pinctrl-bcm6368.c
++++ b/drivers/pinctrl/bcm63xx/pinctrl-bcm6368.c
+@@ -510,12 +510,8 @@ static int bcm6368_pinctrl_probe(struct
+ 	struct regmap *basemode;
+ 	struct reg_field overlay = REG_FIELD(0, 0, 3);
+ 
+-	if (pdev->dev.of_node)
+-		basemode = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
+-							   "brcm,gpiobasemode");
+-	else
+-		basemode = syscon_regmap_lookup_by_pdevname("syscon.b00000b8");
+-
++	basemode = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
++						   "brcm,gpiobasemode");
+ 	if (IS_ERR(basemode))
+ 		return PTR_ERR(basemode);
+ 

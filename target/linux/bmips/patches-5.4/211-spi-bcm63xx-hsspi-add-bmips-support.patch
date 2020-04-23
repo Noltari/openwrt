@@ -1,0 +1,63 @@
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -147,7 +147,7 @@ config SPI_BCM63XX
+ 
+ config SPI_BCM63XX_HSSPI
+ 	tristate "Broadcom BCM63XX HS SPI controller driver"
+-	depends on BCM63XX || ARCH_BCM_63XX || COMPILE_TEST
++	depends on BCM63XX || ARCH_BCM_63XX || BMIPS_GENERIC || COMPILE_TEST
+ 	help
+ 	  This enables support for the High Speed SPI controller present on
+ 	  newer Broadcom BCM63XX SoCs.
+--- a/drivers/spi/spi-bcm63xx-hsspi.c
++++ b/drivers/spi/spi-bcm63xx-hsspi.c
+@@ -20,6 +20,7 @@
+ #include <linux/spi/spi.h>
+ #include <linux/mutex.h>
+ #include <linux/of.h>
++#include <linux/reset.h>
+ 
+ #define HSSPI_GLOBAL_CTRL_REG			0x0
+ #define GLOBAL_CTRL_CS_POLARITY_SHIFT		0
+@@ -335,6 +336,7 @@ static int bcm63xx_hsspi_probe(struct pl
+ 	struct clk *clk, *pll_clk = NULL;
+ 	int irq, ret;
+ 	u32 reg, rate, num_cs = HSSPI_SPI_MAX_CS;
++	struct reset_control *reset;
+ 
+ 	irq = platform_get_irq(pdev, 0);
+ 	if (irq < 0)
+@@ -349,10 +351,25 @@ static int bcm63xx_hsspi_probe(struct pl
+ 	if (IS_ERR(clk))
+ 		return PTR_ERR(clk);
+ 
++	reset = devm_reset_control_get(dev, NULL);
++	if (IS_ERR(reset)) {
++		ret = PTR_ERR(reset);
++		if (ret != -EPROBE_DEFER)
++			dev_err(dev,
++				"failed to get reset controller: %d\n", ret);
++		return ret;
++	}
++
+ 	ret = clk_prepare_enable(clk);
+ 	if (ret)
+ 		return ret;
+ 
++	ret = reset_control_reset(reset);
++	if (ret) {
++		dev_err(dev, "unable to reset device: %d\n", ret);
++		goto out_disable_clk;
++	}
++
+ 	rate = clk_get_rate(clk);
+ 	if (!rate) {
+ 		pll_clk = devm_clk_get(dev, "pll");
+@@ -406,7 +423,6 @@ static int bcm63xx_hsspi_probe(struct pl
+ 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH |
+ 			    SPI_RX_DUAL | SPI_TX_DUAL;
+ 	master->bits_per_word_mask = SPI_BPW_MASK(8);
+-	master->auto_runtime_pm = true;
+ 
+ 	platform_set_drvdata(pdev, master);
+ 

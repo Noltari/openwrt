@@ -1,0 +1,25 @@
+--- a/drivers/net/ethernet/broadcom/Kconfig
++++ b/drivers/net/ethernet/broadcom/Kconfig
+@@ -51,6 +51,12 @@ config B44_PCI
+ 	depends on B44_PCI_AUTOSELECT && B44_PCICORE_AUTOSELECT
+ 	default y
+ 
++config BCM6368_ENETSW
++	tristate "Broadcom 6368 Ethernet Switch support"
++	depends on BMIPS_GENERIC
++	select MII
++	select PHYLIB
++
+ config BCM63XX_ENET
+ 	tristate "Broadcom 63xx internal mac support"
+ 	depends on BCM63XX
+--- a/drivers/net/ethernet/broadcom/Makefile
++++ b/drivers/net/ethernet/broadcom/Makefile
+@@ -4,6 +4,7 @@
+ #
+ 
+ obj-$(CONFIG_B44) += b44.o
++obj-$(CONFIG_BCM6368_ENETSW) += bcm6368-enetsw.o
+ obj-$(CONFIG_BCM63XX_ENET) += bcm63xx_enet.o
+ obj-$(CONFIG_BCMGENET) += genet/
+ obj-$(CONFIG_BNX2) += bnx2.o

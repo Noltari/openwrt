@@ -1,0 +1,24 @@
+--- a/arch/mips/bmips/Kconfig
++++ b/arch/mips/bmips/Kconfig
+@@ -80,4 +80,15 @@ config DT_SFR_NEUFBOX6_SERCOMM
+ 
+ endchoice
+ 
++config BCM63XX_POWER
++	bool "BCM63XX Power Domain support"
++	depends on PM && OF
++	select PM_GENERIC_DOMAINS
++	select PM_GENERIC_DOMAINS_OF
++	default y
++	help
++	  Say Y here to enable support for power domains on the BCM63XX.
++	  Required to ensure that power is enabled for SoC peripheral
++	  devices, and that power is disabled to unused devices.
++
+ endif
+--- a/arch/mips/bmips/Makefile
++++ b/arch/mips/bmips/Makefile
+@@ -1,2 +1,3 @@
+ # SPDX-License-Identifier: GPL-2.0-only
+ obj-y		+= setup.o irq.o dma.o
++obj-$(CONFIG_BCM63XX_POWER) += bcm63xx-power.o
