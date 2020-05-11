@@ -949,13 +949,17 @@ struct platform_device bcm63xx_b53_dev = {
 	},
 };
 
-static int bcm6368_enetsw_register(struct bcm6368_enetsw *priv, u16 port_mask)
+static int bcm6368_enetsw_register(struct platform_device *pdev,
+				   struct bcm6368_enetsw *priv,
+				   u16 port_mask)
 {
 	int ret;
 
 	bcm63xx_b53_pdata.regs = priv->base;
 	bcm63xx_b53_pdata.enabled_ports = port_mask;
 	bcm63xx_b53_pdata.alias = priv->net_dev->name;
+
+//	bcm63xx_b53_dev.dev.of_node = pdev->dev.of_node;
 
 	ret = platform_device_register(&bcm63xx_b53_dev);
 	if (!ret)
@@ -1690,9 +1694,10 @@ static const struct ethtool_ops bcm6368_enetsw_ethtool_ops = {
 static int bcm6368_enetsw_probe(struct platform_device *pdev)
 {
 	struct bcm6368_enetsw *priv;
+	struct dsa_chip_data *cd = &bcm63xx_b53_pdata.cd;
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->of_node;
-	struct device_node *child;
+	struct device_node *of_ports, *of_port;
 	struct net_device *ndev;
 	struct resource *res;
 	const void *mac;
@@ -1807,35 +1812,58 @@ static int bcm6368_enetsw_probe(struct platform_device *pdev)
 		dev_info(dev, "random mac %pM\n", ndev->dev_addr);
 	}
 
-	for_each_child_of_node(node, child) {
+	of_ports = of_get_child_by_name(node, "ports");
+	if (!of_ports) {
+		dev_err(dev, "no ports child node found\n");
+		return -EINVAL;
+	}
+
+	for_each_available_child_of_node(of_ports, of_port) {
 		struct bcm6368_enetsw_port *port;
+		struct device_node *of_fixlnk;
 		u32 reg;
 
-		if (!of_device_is_available(child))
-			continue;
+		ret = of_property_read_u32(of_port, "reg", &reg);
+		if (ret)
+			return -EINVAL;
 
-		if (!of_device_is_compatible(child, "brcm,enetsw-port"))
+		if (reg == ENETSW_MAX_PORT) {
+			const char *name;
+
+			cd->netdev[reg] = dev;
+			if (of_property_read_string(of_port, "label", &name))
+				continue;
+
+			cd->port_names[reg] = kstrdup(name, GFP_KERNEL);
+
 			continue;
-	
-		if (of_property_read_u32(child, "reg", &reg) ||
-		    reg >= ENETSW_MAX_PORT)
+		} else if (reg > ENETSW_MAX_PORT) {
 			continue;
+		}
 
 		port = &priv->used_ports[reg];
 
-		if (of_property_read_s32(child, "brcm,phy-id", &port->phy_id))
+		if (of_property_read_s32(of_port, "brcm,phy-id",
+					 &port->phy_id))
 			continue;
 
-		if (of_property_read_bool(child, "brcm,bypass-link"))
+		if (of_property_read_bool(of_port, "brcm,bypass-link"))
 			port->bypass_link = true;
 
-		of_property_read_s32(child, "speed", &port->force_speed);
+		of_fixlnk = of_get_child_by_name(of_port, "fixed-link");
+		if (of_fixlnk) {
+			if (of_property_read_bool(of_port, "full-duplex"))
+				port->force_duplex_full = true;
 
-		if (of_property_read_bool(child, "full-duplex"))
-			port->force_duplex_full = true;
+			of_property_read_s32(of_port, "speed",
+					     &port->force_speed);
+		}
 
-		if (of_property_read_string(child, "label", &port->name))
+		if (of_property_read_string(of_port, "label", &port->name))
 			continue;
+
+		cd->netdev[reg] = dev;
+		cd->port_names[reg] = kstrdup(port->name, GFP_KERNEL);
 
 		port->used = true;
 	}
@@ -1944,7 +1972,7 @@ static int bcm6368_enetsw_probe(struct platform_device *pdev)
 
 	/* only register if there is more than one external port */
 	if (num_ports > 1)
-		bcm6368_enetsw_register(priv, port_mask);
+		bcm6368_enetsw_register(pdev, priv, port_mask);
 
 	return 0;
 
