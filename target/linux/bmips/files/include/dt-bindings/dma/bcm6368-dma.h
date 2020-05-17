@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+#ifndef __DT_BINDINGS_DMA_BCM6368_H
+#define __DT_BINDINGS_DMA_BCM6368_H
+
+#define BCM6368_DMA_ENETSW_RX	0
+#define BCM6368_DMA_ENETSW_TX	1
+
+#endif /* __DT_BINDINGS_DMA_BCM6368_H */

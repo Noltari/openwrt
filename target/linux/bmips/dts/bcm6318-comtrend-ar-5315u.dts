@@ -1,0 +1,207 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+/dts-v1/;
+
+#include "bcm6318.dtsi"
+
+/ {
+	compatible = "comtrend,ar-5315u", "brcm,bcm6318";
+	model = "Comtrend AR-5315u";
+
+	aliases {
+		led-boot = &power_green;
+		led-dsl = &dsl_green;
+		led-failsafe = &power_green;
+		led-internet = &internet_green;
+		led-running = &power_green;
+		led-upgrade = &power_green;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon";
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x00000000 0x04000000>;
+	};
+
+	keys {
+		compatible = "gpio-keys-polled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		poll-interval = <20>;
+
+		reset {
+			label = "reset";
+			gpios = <&pinctrl 23 1>;
+			linux,code = <KEY_RESTART>;
+			debounce-interval = <60>;
+		};
+	};
+
+	bcm43217-sprom {
+		compatible = "brcm,bcm43217-sprom";
+
+		pci-bus = <1>;
+		pci-dev = <0>;
+
+		mtd-mac-address = <&cfe 0x6a0>;
+		mtd-mac-address-increment = <1>;
+
+		brcm,sprom-fixups = <6 0x1c00>,
+				    <65 0x1255>,
+				    <97 0xfe55>,
+				    <98 0x171d>,
+				    <99 0xfa42>,
+				    <113 0xfeb7>,
+				    <114 0x18cd>,
+				    <115 0xfa4f>,
+				    <162 0x6444>,
+				    <170 0x6444>,
+				    <172 0x6444>;
+	};
+};
+
+&ehci {
+	status = "okay";
+};
+
+&ethernet {
+	status = "okay";
+
+	mtd-mac-address = <&cfe 0x6a0>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			label = "fe4";
+			brcm,phy-id = <1>;
+		};
+
+		port@1 {
+			reg = <1>;
+			label = "fe3";
+			brcm,phy-id = <2>;
+		};
+
+		port@2 {
+			reg = <2>;
+			label = "fe2";
+			brcm,phy-id = <3>;
+		};
+
+		port@3 {
+			reg = <3>;
+			label = "fe1";
+			brcm,phy-id = <4>;
+		};
+	};
+};
+
+&hsspi {
+	status = "okay";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		spi-max-frequency = <62500000>;
+		spi-tx-bus-width = <2>;
+		spi-rx-bus-width = <2>;
+		reg = <0>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			cfe: partition@0 {
+				reg = <0x000000 0x010000>;
+				label = "cfe";
+				read-only;
+			};
+
+			partition@10000 {
+				reg = <0x010000 0xfe0000>;
+				label = "firmware";
+				compatible = "brcm,bcm963xx-imagetag";
+			};
+
+			partition@ff0000 {
+				reg = <0xff0000 0x010000>;
+				label = "nvram";
+			};
+		};
+	};
+};
+
+&leds {
+	status = "okay";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ephy0_act_led &pinctrl_ephy1_act_led
+		     &pinctrl_ephy2_act_led &pinctrl_ephy3_act_led>;
+
+	wps_green: led@0 {
+		reg = <0>;
+		active-low;
+		label = "ar-5315u:green:wps";
+	};
+
+	power_green: led@1 {
+		reg = <1>;
+		active-low;
+		label = "ar-5315u:green:power";
+	};
+
+	usb_green: led@2 {
+		reg = <2>;
+		active-low;
+		label = "ar-5315u:green:usb";
+	};
+
+	internet_green: led@8 {
+		reg = <8>;
+		active-low;
+		label = "ar-5315u:green:internet";
+	};
+
+	internet_red: led@9 {
+		reg = <9>;
+		active-low;
+		label = "ar-5315u:red:internet";
+	};
+
+	dsl_green: led@10 {
+		reg = <10>;
+		active-low;
+		label = "ar-5315u:green:dsl";
+	};
+
+	power_red: led@11 {
+		reg = <11>;
+		active-low;
+		label = "ar-5315u:red:power";
+	};
+};
+
+&ohci {
+	status = "okay";
+};
+
+&pcie {
+	status = "okay";
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&usbh {
+	status = "okay";
+};

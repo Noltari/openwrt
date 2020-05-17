@@ -1,0 +1,10 @@
+--- a/drivers/irqchip/irq-bcm6345-periph.c
++++ b/drivers/irqchip/irq-bcm6345-periph.c
+@@ -334,6 +334,6 @@ out_unmap:
+ 	return ret;
+ }
+ 
+-IRQCHIP_DECLARE(bcm6345_periph_intc, "brcm,bcm6345-l1-intc",
++IRQCHIP_DECLARE(bcm6345_periph_intc, "brcm,bcm6345-periph-intc",
+ 		bcm6345_periph_of_init);
+ #endif

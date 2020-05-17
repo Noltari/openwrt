@@ -1,0 +1,29 @@
+--- a/drivers/phy/broadcom/Kconfig
++++ b/drivers/phy/broadcom/Kconfig
+@@ -2,6 +2,18 @@
+ #
+ # Phy drivers for Broadcom platforms
+ #
++config PHY_BCM63XX_USBH
++	tristate "Broadcom BCM63xx USBH PHY driver"
++	depends on OF
++	select GENERIC_PHY
++	help
++	  Enable this to support the BCM63xx USBH PHY on the following SoC
++	  variants of the device:
++	    BCM6318
++	    BCM6328 (includes BCM63168, BCM63268, BCM6828, BCM68220)
++	    BCM6358
++	    BCM6368 (includes BCM6362, BCM6816)
++
+ config PHY_CYGNUS_PCIE
+ 	tristate "Broadcom Cygnus PCIe PHY driver"
+ 	depends on OF && (ARCH_BCM_CYGNUS || COMPILE_TEST)
+--- a/drivers/phy/broadcom/Makefile
++++ b/drivers/phy/broadcom/Makefile
+@@ -1,4 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0
++obj-$(CONFIG_PHY_BCM63XX_USBH)		+= phy-bcm63xx-usbh.o
+ obj-$(CONFIG_PHY_CYGNUS_PCIE)		+= phy-bcm-cygnus-pcie.o
+ obj-$(CONFIG_BCM_KONA_USB2_PHY)		+= phy-bcm-kona-usb2.o
+ obj-$(CONFIG_PHY_BCM_NS_USB2)		+= phy-bcm-ns-usb2.o

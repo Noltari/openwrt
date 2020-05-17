@@ -1,0 +1,37 @@
+--- a/drivers/watchdog/bcm63xx_wdt.c
++++ b/drivers/watchdog/bcm63xx_wdt.c
+@@ -136,8 +136,8 @@ static irqreturn_t bcm63xx_wdt_interrupt
+ 		}
+ 
+ 		ms = timeleft / (hw->clock_hz / 1000);
+-		dev_alert(hw->wdd.dev,
+-			"warning timer fired, reboot in %ums\n", ms);
++		pr_alert("watchdog%d: warning timer fired, reboot in %ums\n",
++			hw->wdd.id, ms);
+ 	}
+ 	raw_spin_unlock_irqrestore(&hw->lock, flags);
+ 	return IRQ_HANDLED;
+@@ -250,18 +250,18 @@ static int bcm63xx_wdt_probe(struct plat
+ 
+ 	if (hw->irq >= 0) {
+ 		dev_info(&pdev->dev,
+-			"%s at MMIO 0x%p (irq = %d, timeout = %us, max_timeout = %us)",
+-			dev_name(wdd->dev), hw->regs, hw->irq,
++			"watchdog%d at MMIO 0x%p (irq = %d, timeout = %us, max_timeout = %us)",
++			wdd->id, hw->regs, hw->irq,
+ 			wdd->timeout, wdd->max_timeout);
+ 	} else {
+ 		dev_info(&pdev->dev,
+-			"%s at MMIO 0x%p (timeout = %us, max_timeout = %us)",
+-			dev_name(wdd->dev), hw->regs,
++			"watchdog%d at MMIO 0x%p (timeout = %us, max_timeout = %us)",
++			wdd->id, hw->regs,
+ 			wdd->timeout, wdd->max_timeout);
+ 	}
+ 
+ 	if (hw->running)
+-		dev_alert(wdd->dev, "running, reboot in %us\n", timeleft);
++		dev_alert(&pdev->dev, "watchdog%d: running, reboot in %us\n", wdd->id, timeleft);
+ 	return 0;
+ 
+ disable_clk:

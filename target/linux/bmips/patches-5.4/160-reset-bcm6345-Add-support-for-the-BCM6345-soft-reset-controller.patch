@@ -1,0 +1,19 @@
+--- a/drivers/reset/Kconfig
++++ b/drivers/reset/Kconfig
+@@ -208,6 +208,7 @@ config RESET_ZYNQ
+ 	help
+ 	  This enables the reset controller driver for Xilinx Zynq SoCs.
+ 
++source "drivers/reset/bcm/Kconfig"
+ source "drivers/reset/sti/Kconfig"
+ source "drivers/reset/hisilicon/Kconfig"
+ source "drivers/reset/tegra/Kconfig"
+--- a/drivers/reset/Makefile
++++ b/drivers/reset/Makefile
+@@ -1,5 +1,6 @@
+ # SPDX-License-Identifier: GPL-2.0
+ obj-y += core.o
++obj-y += bcm/
+ obj-y += hisilicon/
+ obj-$(CONFIG_ARCH_STI) += sti/
+ obj-$(CONFIG_ARCH_TEGRA) += tegra/

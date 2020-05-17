@@ -1,0 +1,58 @@
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -141,7 +141,7 @@ config SPI_BCM2835AUX
+ 
+ config SPI_BCM63XX
+ 	tristate "Broadcom BCM63xx SPI controller"
+-	depends on BCM63XX || COMPILE_TEST
++	depends on BCM63XX || BMIPS_GENERIC || COMPILE_TEST
+ 	help
+           Enable support for the SPI controller on the Broadcom BCM63xx SoCs.
+ 
+--- a/drivers/spi/spi-bcm63xx.c
++++ b/drivers/spi/spi-bcm63xx.c
+@@ -18,6 +18,7 @@
+ #include <linux/err.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/of.h>
++#include <linux/reset.h>
+ 
+ /* BCM 6338/6348 SPI core */
+ #define SPI_6348_RSET_SIZE		64
+@@ -493,6 +494,7 @@ static int bcm63xx_spi_probe(struct plat
+ 	struct bcm63xx_spi *bs;
+ 	int ret;
+ 	u32 num_cs = BCM63XX_SPI_MAX_CS;
++	struct reset_control *reset;
+ 
+ 	if (dev->of_node) {
+ 		const struct of_device_id *match;
+@@ -529,6 +531,15 @@ static int bcm63xx_spi_probe(struct plat
+ 		return PTR_ERR(clk);
+ 	}
+ 
++	reset = devm_reset_control_get(dev, NULL);
++	if (IS_ERR(reset)) {
++		ret = PTR_ERR(reset);
++		if (ret != -EPROBE_DEFER)
++			dev_err(dev,
++				"failed to get reset controller: %d\n", ret);
++		return ret;
++	}
++
+ 	master = spi_alloc_master(dev, sizeof(*bs));
+ 	if (!master) {
+ 		dev_err(dev, "out of memory\n");
+@@ -579,6 +590,12 @@ static int bcm63xx_spi_probe(struct plat
+ 	if (ret)
+ 		goto out_err;
+ 
++	ret = reset_control_reset(reset);
++	if (ret) {
++		dev_err(dev, "unable to reset device: %d\n", ret);
++		goto out_clk_disable;
++	}
++
+ 	bcm_spi_writeb(bs, SPI_INTR_CLEAR_ALL, SPI_INT_STATUS);
+ 
+ 	/* register and we are done */
