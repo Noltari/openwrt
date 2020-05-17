@@ -3,7 +3,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=bcm63xx-cferam
 PKG_VERSION:=2020-05-10
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_URL:=https://github.com/Noltari/bcm63xx-cferam.git
 PKG_SOURCE_PROTO:=git
@@ -22,9 +22,9 @@ TAR_CMD=$(HOST_TAR) -C $(1) $(TAR_OPTIONS)
 define Package/bcm63xx-cferam
   SECTION:=boot
   CATEGORY:=Boot Loaders
-  DEPENDS:=@TARGET_bcm63xx
+  DEPENDS:=@(TARGET_bcm63xx||TARGET_bmips)
   TITLE:=bcm63xx-cferam
-  DEFAULT:=y if TARGET_bcm63xx
+  DEFAULT:=y if (TARGET_bcm63xx||TARGET_bmips)
 endef
 
 define Package/bcm63xx-cferam/description
