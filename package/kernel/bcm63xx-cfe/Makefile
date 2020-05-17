@@ -17,9 +17,9 @@ include $(INCLUDE_DIR)/package.mk
 define Package/bcm63xx-cfe
   SECTION:=boot
   CATEGORY:=Boot Loaders
-  DEPENDS:=@TARGET_bcm63xx
+  DEPENDS:=@(TARGET_bcm63xx||TARGET_bmips)
   TITLE:=bcm63xx-cfe
-  DEFAULT:=y if TARGET_bcm63xx
+  DEFAULT:=y if (TARGET_bcm63xx||TARGET_bmips)
 endef
 
 define Package/bcm63xx-cfe/description
