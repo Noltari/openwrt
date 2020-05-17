@@ -1,0 +1,8 @@
+--- a/arch/mips/bmips/Makefile
++++ b/arch/mips/bmips/Makefile
+@@ -1,4 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0-only
+ obj-y		+= setup.o irq.o dma.o
+ obj-y		+= b43-sprom.o
++obj-y		+= ath9k-fixup.o
+ obj-$(CONFIG_BCM63XX_POWER) += bcm63xx-power.o

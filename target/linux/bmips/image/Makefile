@@ -187,6 +187,7 @@ define Device/Default
 endef
 DEVICE_VARS += CHIP_ID
 
+ATH9K_PACKAGES := kmod-ath9k wpad-mini
 B43_PACKAGES := kmod-b43 wpad-mini
 BRCMSMAC_PACKAGES := kmod-brcmsmac wpad-mini
 USB1_PACKAGES := kmod-usb-ohci kmod-ledtrig-usbdev

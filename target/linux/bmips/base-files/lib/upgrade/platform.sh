@@ -6,7 +6,8 @@ platform_check_image() {
 	case "$(board_name)" in
 		comtrend,ar-5315u|\
 		comtrend,ar-5387un|\
-		comtrend,vr-3025u)
+		comtrend,vr-3025u|\
+		huawei,hg556a-b)
 			case "$(get_magic_word "$1")" in
 				3600|3700|3800)
 					return 0

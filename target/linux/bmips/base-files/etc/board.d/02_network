@@ -15,6 +15,10 @@ comtrend,vr-3032u)
 	ucidef_add_switch "switch0" \
 		"0:lan:1" "1:lan:2" "2:lan:3" "3:lan:4" "8t@eth0"
 	;;
+huawei,hg556a-b)
+	ucidef_add_switch "switch0" \
+		"0:lan:1" "1:lan:2" "2:lan:3" "3:lan:4" "5t@eth0"
+	;;
 *)
 	ucidef_set_interface_lan "eth0"
 	;;
