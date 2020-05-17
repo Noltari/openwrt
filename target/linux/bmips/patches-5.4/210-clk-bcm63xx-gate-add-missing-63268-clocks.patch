@@ -1,0 +1,59 @@
+--- a/drivers/clk/bcm/clk-bcm63xx-gate.c
++++ b/drivers/clk/bcm/clk-bcm63xx-gate.c
+@@ -482,6 +482,25 @@ static const struct clk_bcm63xx_table_en
+ 	},
+ };
+ 
++static const struct clk_bcm63xx_table_entry bcm63268_timer_clocks[] = {
++	{ .name = "ephy1-timer", .bit = 0, },
++	{ .name = "ephy2-timer", .bit = 1, },
++	{ .name = "ephy3-timer", .bit = 2, },
++	{ .name = "gphy-timer", .bit = 3, },
++	{ .name = "dsl-timer", .bit = 4, },
++	{ .name = "wo_ephy-timer", .bit = 5, },
++	{ .name = "wo_dsl-timer", .bit = 6, },
++	{ .name = "fap1-timer", .bit = 11, },
++	{ .name = "fap2-timer", .bit = 15, },
++	{ .name = "uto_50-timer", .bit = 16, },
++	{ .name = "uto_ext-timer", .bit = 17, },
++	{ .name = "usb_ref-timer", .bit = 18, },
++	{ .name = "sw_rst-timer", .bit = 29, },
++	{ .name = "hw_rst-timer", .bit = 30, },
++	{ .name = "port_rst-timer", .bit = 31, },
++	{ },
++};
++
+ static int clk_bcm63xx_probe(struct platform_device *pdev)
+ {
+ 	const struct clk_bcm63xx_table_entry *entry, *table;
+@@ -565,6 +584,7 @@ static const struct of_device_id clk_bcm
+ 	{ .compatible = "brcm,bcm6362-clocks", .data = &bcm6362_clocks, },
+ 	{ .compatible = "brcm,bcm6368-clocks", .data = &bcm6368_clocks, },
+ 	{ .compatible = "brcm,bcm63268-clocks", .data = &bcm63268_clocks, },
++	{ .compatible = "brcm,bcm63268-timer-clocks", .data = &bcm63268_timer_clocks, },
+ 	{ }
+ };
+ 
+--- a/include/dt-bindings/clock/bcm63268-clock.h
++++ b/include/dt-bindings/clock/bcm63268-clock.h
+@@ -27,4 +27,20 @@
+ #define BCM63268_CLK_TBUS	27
+ #define BCM63268_CLK_ROBOSW250	31
+ 
++#define BCM63268_TCLK_EPHY1	0
++#define BCM63268_TCLK_EPHY2	1
++#define BCM63268_TCLK_EPHY3	2
++#define BCM63268_TCLK_GPHY	3
++#define BCM63268_TCLK_DSL	4
++#define BCM63268_TCLK_WO_EPHY	5
++#define BCM63268_TCLK_WO_DSL	6
++#define BCM63268_TCLK_FAP1	11
++#define BCM63268_TCLK_FAP2	15
++#define BCM63268_TCLK_UTO_50	16
++#define BCM63268_TCLK_UTO_EXT	17
++#define BCM63268_TCLK_USB_REF	18
++#define BCM63268_TCLK_SW_RST	29
++#define BCM63268_TCLK_HW_RST	30
++#define BCM63268_TCLK_POR_RST	31
++
+ #endif /* __DT_BINDINGS_CLOCK_BCM63268_H */

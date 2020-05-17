@@ -1,0 +1,25 @@
+#!/bin/sh
+
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+
+case "$(board_name)" in
+comtrend,ar-5315u)
+	ucidef_add_switch "switch0" \
+		"0:lan:4" "1:lan:3" "2:lan:2" "3:lan:1" "8t@eth0"
+	;;
+comtrend,ar-5387un|\
+comtrend,vr-3025u|\
+comtrend,vr-3032u)
+	ucidef_add_switch "switch0" \
+		"0:lan:1" "1:lan:2" "2:lan:3" "3:lan:4" "8t@eth0"
+	;;
+*)
+	ucidef_set_interface_lan "eth0"
+	;;
+esac
+
+board_config_flush
+
+exit 0

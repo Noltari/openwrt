@@ -1,0 +1,62 @@
+From 38807adeaf1ec0785b27dc18fe4562a375f80de7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Tue, 16 Jun 2020 19:32:34 +0200
+Subject: [PATCH] spi: bcm63xx-spi: add reset support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+bcm63xx arch resets the SPI controller at early boot. However, bmips arch
+needs to perform a reset when probing the driver.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+Reviewed-by: Philipp Zabel <p.zabel@pengutronix.de>
+Reviewed-by: Florian Fainelli <f.fainelli@gmail.com>
+Link: https://lore.kernel.org/r/20200616173235.3473149-2-noltari@gmail.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/spi-bcm63xx.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+--- a/drivers/spi/spi-bcm63xx.c
++++ b/drivers/spi/spi-bcm63xx.c
+@@ -18,6 +18,7 @@
+ #include <linux/err.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/of.h>
++#include <linux/reset.h>
+ 
+ /* BCM 6338/6348 SPI core */
+ #define SPI_6348_RSET_SIZE		64
+@@ -493,6 +494,7 @@ static int bcm63xx_spi_probe(struct plat
+ 	struct bcm63xx_spi *bs;
+ 	int ret;
+ 	u32 num_cs = BCM63XX_SPI_MAX_CS;
++	struct reset_control *reset;
+ 
+ 	if (dev->of_node) {
+ 		const struct of_device_id *match;
+@@ -529,6 +531,10 @@ static int bcm63xx_spi_probe(struct plat
+ 		return PTR_ERR(clk);
+ 	}
+ 
++	reset = devm_reset_control_get_optional_exclusive(dev, NULL);
++	if (IS_ERR(reset))
++		return PTR_ERR(reset);
++
+ 	master = spi_alloc_master(dev, sizeof(*bs));
+ 	if (!master) {
+ 		dev_err(dev, "out of memory\n");
+@@ -579,6 +585,12 @@ static int bcm63xx_spi_probe(struct plat
+ 	if (ret)
+ 		goto out_err;
+ 
++	ret = reset_control_reset(reset);
++	if (ret) {
++		dev_err(dev, "unable to reset device: %d\n", ret);
++		goto out_clk_disable;
++	}
++
+ 	bcm_spi_writeb(bs, SPI_INTR_CLEAR_ALL, SPI_INT_STATUS);
+ 
+ 	/* register and we are done */

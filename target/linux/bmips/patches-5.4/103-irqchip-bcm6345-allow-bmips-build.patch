@@ -1,0 +1,16 @@
+--- a/drivers/irqchip/Kconfig
++++ b/drivers/irqchip/Kconfig
+@@ -151,11 +151,11 @@ config DAVINCI_CP_INTC
+ 	select IRQ_DOMAIN
+ 
+ config BCM6345_EXT_IRQ
+-	bool
++	bool "BCM6345 External IRQ Controller"
+ 	select IRQ_DOMAIN
+ 
+ config BCM6345_PERIPH_IRQ
+-	bool
++	bool "BCM6345 Peripheral IRQ Controller"
+ 	select IRQ_DOMAIN
+ 
+ config DW_APB_ICTL

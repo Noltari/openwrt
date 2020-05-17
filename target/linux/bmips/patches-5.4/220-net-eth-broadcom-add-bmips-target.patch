@@ -1,0 +1,11 @@
+--- a/drivers/net/ethernet/broadcom/Kconfig
++++ b/drivers/net/ethernet/broadcom/Kconfig
+@@ -7,7 +7,7 @@ config NET_VENDOR_BROADCOM
+ 	bool "Broadcom devices"
+ 	default y
+ 	depends on (SSB_POSSIBLE && HAS_DMA) || PCI || BCM63XX || \
+-		   SIBYTE_SB1xxx_SOC
++		   SIBYTE_SB1xxx_SOC || BMIPS_GENERIC
+ 	---help---
+ 	  If you have a network (Ethernet) chipset belonging to this class,
+ 	  say Y.

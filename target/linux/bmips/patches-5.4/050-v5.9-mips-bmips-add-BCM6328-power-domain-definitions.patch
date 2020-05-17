@@ -1,0 +1,37 @@
+From 7e7b081c853895fcda6c187fb4369134b5d4ffb0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Wed, 10 Jun 2020 19:16:23 +0200
+Subject: [PATCH] mips: bmips: add BCM6328 power domain definitions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+BCM6328 SoCs have a power domain controller to enable/disable certain
+components in order to save power.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+---
+ include/dt-bindings/soc/bcm6328-pm.h | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+ create mode 100644 include/dt-bindings/soc/bcm6328-pm.h
+
+--- /dev/null
++++ b/include/dt-bindings/soc/bcm6328-pm.h
+@@ -0,0 +1,17 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++
++#ifndef __DT_BINDINGS_BMIPS_BCM6328_PM_H
++#define __DT_BINDINGS_BMIPS_BCM6328_PM_H
++
++#define BCM6328_POWER_DOMAIN_ADSL2_MIPS	0
++#define BCM6328_POWER_DOMAIN_ADSL2_PHY	1
++#define BCM6328_POWER_DOMAIN_ADSL2_AFE	2
++#define BCM6328_POWER_DOMAIN_SAR	3
++#define BCM6328_POWER_DOMAIN_PCM	4
++#define BCM6328_POWER_DOMAIN_USBD	5
++#define BCM6328_POWER_DOMAIN_USBH	6
++#define BCM6328_POWER_DOMAIN_PCIE	7
++#define BCM6328_POWER_DOMAIN_ROBOSW	8
++#define BCM6328_POWER_DOMAIN_EPHY	9
++
++#endif /* __DT_BINDINGS_BMIPS_BCM6328_PM_H */

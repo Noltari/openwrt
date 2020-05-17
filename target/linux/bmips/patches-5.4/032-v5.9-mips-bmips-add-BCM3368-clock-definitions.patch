@@ -1,0 +1,47 @@
+From c7f03eea07682639ef320aab348b706c330941dd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Mon, 15 Jun 2020 11:02:24 +0200
+Subject: [PATCH] mips: bmips: add BCM3368 clock definitions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add header with BCM3368 definitions in order to be able to include it from
+device tree files.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+Link: https://lore.kernel.org/r/20200615090231.2932696-2-noltari@gmail.com
+Acked-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: Stephen Boyd <sboyd@kernel.org>
+---
+ include/dt-bindings/clock/bcm3368-clock.h | 24 +++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+ create mode 100644 include/dt-bindings/clock/bcm3368-clock.h
+
+--- /dev/null
++++ b/include/dt-bindings/clock/bcm3368-clock.h
+@@ -0,0 +1,24 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++
++#ifndef __DT_BINDINGS_CLOCK_BCM3368_H
++#define __DT_BINDINGS_CLOCK_BCM3368_H
++
++#define BCM3368_CLK_MAC 	3
++#define BCM3368_CLK_TC         	5
++#define BCM3368_CLK_US_TOP	6
++#define BCM3368_CLK_DS_TOP	7
++#define BCM3368_CLK_ACM 	8
++#define BCM3368_CLK_SPI	        9
++#define BCM3368_CLK_USBS	10
++#define BCM3368_CLK_BMU         11
++#define BCM3368_CLK_PCM         12
++#define BCM3368_CLK_NTP         13
++#define BCM3368_CLK_ACP_B       14
++#define BCM3368_CLK_ACP_A       15
++#define BCM3368_CLK_EMUSB       17
++#define BCM3368_CLK_ENET0       18
++#define BCM3368_CLK_ENET1       19
++#define BCM3368_CLK_USBSU       20
++#define BCM3368_CLK_EPHY        21
++
++#endif /* __DT_BINDINGS_CLOCK_BCM3368_H */

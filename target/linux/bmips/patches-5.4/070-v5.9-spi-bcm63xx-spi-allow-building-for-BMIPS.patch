@@ -1,0 +1,30 @@
+From 3a521450ff218ddac9b2c15fcd2bcadab56ff79d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Mon, 15 Jun 2020 11:09:41 +0200
+Subject: [PATCH] spi: bcm63xx-spi: allow building for BMIPS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+bcm63xx-spi controller is present on several BMIPS SoCs (BCM6358, BCM6362,
+BCM6368 and BCM63268).
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+Acked-by: Florian Fainelli <f.fainelli@gmail.com>
+Link: https://lore.kernel.org/r/20200615090943.2936839-3-noltari@gmail.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -141,7 +141,7 @@ config SPI_BCM2835AUX
+ 
+ config SPI_BCM63XX
+ 	tristate "Broadcom BCM63xx SPI controller"
+-	depends on BCM63XX || COMPILE_TEST
++	depends on BCM63XX || BMIPS_GENERIC || COMPILE_TEST
+ 	help
+           Enable support for the SPI controller on the Broadcom BCM63xx SoCs.
+ 

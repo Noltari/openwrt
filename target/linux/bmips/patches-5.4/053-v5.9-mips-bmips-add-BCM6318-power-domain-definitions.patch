@@ -1,0 +1,37 @@
+From 60a8b282f72be3a05c88070b49d0417d57329cdb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Wed, 10 Jun 2020 19:16:26 +0200
+Subject: [PATCH] mips: bmips: add BCM6318 power domain definitions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+BCM6318 SoCs have a power domain controller to enable/disable certain
+components in order to save power.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+---
+ include/dt-bindings/soc/bcm6318-pm.h | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+ create mode 100644 include/dt-bindings/soc/bcm6318-pm.h
+
+--- /dev/null
++++ b/include/dt-bindings/soc/bcm6318-pm.h
+@@ -0,0 +1,17 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++
++#ifndef __DT_BINDINGS_BMIPS_BCM6318_PM_H
++#define __DT_BINDINGS_BMIPS_BCM6318_PM_H
++
++#define BCM6318_POWER_DOMAIN_PCIE	0
++#define BCM6318_POWER_DOMAIN_USB	1
++#define BCM6318_POWER_DOMAIN_EPHY0	2
++#define BCM6318_POWER_DOMAIN_EPHY1	3
++#define BCM6318_POWER_DOMAIN_EPHY2	4
++#define BCM6318_POWER_DOMAIN_EPHY3	5
++#define BCM6318_POWER_DOMAIN_LDO2P5	6
++#define BCM6318_POWER_DOMAIN_LDO2P9	7
++#define BCM6318_POWER_DOMAIN_SW1P0	8
++#define BCM6318_POWER_DOMAIN_PAD	9
++
++#endif /* __DT_BINDINGS_BMIPS_BCM6318_PM_H */

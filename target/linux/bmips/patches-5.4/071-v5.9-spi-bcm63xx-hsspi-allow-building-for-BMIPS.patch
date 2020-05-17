@@ -1,0 +1,30 @@
+From ba2137f3dbce5e530eba0c67d37a758b42eb26f8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Mon, 15 Jun 2020 11:09:43 +0200
+Subject: [PATCH] spi: bcm63xx-hsspi: allow building for BMIPS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+bcm63xx-hsspi controller is present on several BMIPS SoCs (BCM6318, BCM6328,
+BCM6362 and BCM63268).
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+Acked-by: Florian Fainelli <f.fainelli@gmail.com>
+Link: https://lore.kernel.org/r/20200615090943.2936839-5-noltari@gmail.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -147,7 +147,7 @@ config SPI_BCM63XX
+ 
+ config SPI_BCM63XX_HSSPI
+ 	tristate "Broadcom BCM63XX HS SPI controller driver"
+-	depends on BCM63XX || ARCH_BCM_63XX || COMPILE_TEST
++	depends on BCM63XX || BMIPS_GENERIC || ARCH_BCM_63XX || COMPILE_TEST
+ 	help
+ 	  This enables support for the High Speed SPI controller present on
+ 	  newer Broadcom BCM63XX SoCs.

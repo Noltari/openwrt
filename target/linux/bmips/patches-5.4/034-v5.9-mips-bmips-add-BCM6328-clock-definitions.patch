@@ -1,0 +1,42 @@
+From 92cd8bb27a692d93ba7442ec123e96528f5e992c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Mon, 15 Jun 2020 11:02:26 +0200
+Subject: [PATCH] mips: bmips: add BCM6328 clock definitions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add header with BCM6328 definitions in order to be able to include it from
+device tree files.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+Link: https://lore.kernel.org/r/20200615090231.2932696-4-noltari@gmail.com
+Acked-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: Stephen Boyd <sboyd@kernel.org>
+---
+ include/dt-bindings/clock/bcm6328-clock.h | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+ create mode 100644 include/dt-bindings/clock/bcm6328-clock.h
+
+--- /dev/null
++++ b/include/dt-bindings/clock/bcm6328-clock.h
+@@ -0,0 +1,19 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++
++#ifndef __DT_BINDINGS_CLOCK_BCM6328_H
++#define __DT_BINDINGS_CLOCK_BCM6328_H
++
++#define BCM6328_CLK_PHYMIPS	0
++#define BCM6328_CLK_ADSL_QPROC	1
++#define BCM6328_CLK_ADSL_AFE	2
++#define BCM6328_CLK_ADSL	3
++#define BCM6328_CLK_MIPS	4
++#define BCM6328_CLK_SAR		5
++#define BCM6328_CLK_PCM		6
++#define BCM6328_CLK_USBD	7
++#define BCM6328_CLK_USBH	8
++#define BCM6328_CLK_HSSPI	9
++#define BCM6328_CLK_PCIE	10
++#define BCM6328_CLK_ROBOSW	11
++
++#endif /* __DT_BINDINGS_CLOCK_BCM6328_H */

@@ -1,0 +1,41 @@
+From 35e51b150d07638fbe2c4498e3d913f43b88f51f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Wed, 10 Jun 2020 19:16:25 +0200
+Subject: [PATCH] mips: bmips: add BCM63268 power domain definitions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+BCM63268 SoCs have a power domain controller to enable/disable certain
+components in order to save power.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+---
+ include/dt-bindings/soc/bcm63268-pm.h | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+ create mode 100644 include/dt-bindings/soc/bcm63268-pm.h
+
+--- /dev/null
++++ b/include/dt-bindings/soc/bcm63268-pm.h
+@@ -0,0 +1,21 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++
++#ifndef __DT_BINDINGS_BMIPS_BCM63268_PM_H
++#define __DT_BINDINGS_BMIPS_BCM63268_PM_H
++
++#define BCM63268_POWER_DOMAIN_SAR	0
++#define BCM63268_POWER_DOMAIN_IPSEC	1
++#define BCM63268_POWER_DOMAIN_MIPS	2
++#define BCM63268_POWER_DOMAIN_DECT	3
++#define BCM63268_POWER_DOMAIN_USBH	4
++#define BCM63268_POWER_DOMAIN_USBD	5
++#define BCM63268_POWER_DOMAIN_ROBOSW	6
++#define BCM63268_POWER_DOMAIN_PCM	7
++#define BCM63268_POWER_DOMAIN_PERIPH	8
++#define BCM63268_POWER_DOMAIN_VDSL_PHY	9
++#define BCM63268_POWER_DOMAIN_VDSL_MIPS	10
++#define BCM63268_POWER_DOMAIN_FAP	11
++#define BCM63268_POWER_DOMAIN_PCIE	12
++#define BCM63268_POWER_DOMAIN_WLAN_PADS	13
++
++#endif /* __DT_BINDINGS_BMIPS_BCM63268_PM_H */
