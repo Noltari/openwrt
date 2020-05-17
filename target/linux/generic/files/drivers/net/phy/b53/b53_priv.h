@@ -146,7 +146,7 @@ static inline int is531x5(struct b53_device *dev)
 
 static inline int is63xx(struct b53_device *dev)
 {
-#ifdef CONFIG_BCM63XX
+#if defined(CONFIG_BCM63XX) || defined(CONFIG_BMIPS_GENERIC)
 	return dev->chip_id == BCM63XX_DEVICE_ID;
 #else
 	return 0;
