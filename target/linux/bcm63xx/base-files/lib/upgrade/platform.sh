@@ -11,7 +11,8 @@ platform_check_image() {
 		netgear,dgnd3700-v2|\
 		sercomm,ad1018|\
 		sercomm,h500-s-lowi|\
-		sercomm,h500-s-vfes)
+		sercomm,h500-s-vfes|\
+		sfr,neufbox-6v-foxconn-r0)
 			# NAND sysupgrade
 			return 0
 			;;
@@ -73,7 +74,8 @@ platform_do_upgrade() {
 		netgear,dgnd3700-v2|\
 		sercomm,ad1018|\
 		sercomm,h500-s-lowi|\
-		sercomm,h500-s-vfes)
+		sercomm,h500-s-vfes|\
+		sfr,neufbox-6v-foxconn-r0)
 			REQUIRE_IMAGE_METADATA=1
 			cfe_jffs2_upgrade_tar "$1"
 			;;
