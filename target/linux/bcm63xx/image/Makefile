@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
 KERNEL_LOADADDR = 0x80010000		# RAM start + 64K
-LOADER_ENTRY = 0x80a00000		# RAM start + 10M, for relocate
+LOADER_ENTRY = 0x81000000		# RAM start + 16M, for relocate
 RAMSIZE = 0x02000000			# 32MB
 LZMA_TEXT_START = 0x81800000		# 32MB - 8MB
 
@@ -105,6 +105,15 @@ define Build/cfe-bin
 		--info2 "$(call Image/FileSystemStrip,$(IMAGE_ROOTFS))" \
 		$(call rootfspad/$(call Image/FileSystemStrip,$(IMAGE_ROOTFS))) \
 		$(CFE_EXTRAS) $(1)
+endef
+
+define Build/cfe-bin-header
+	$(TOPDIR)/scripts/cfe-bin-header.py \
+		--input-file $@ \
+		--output-file $@.new \
+		--load-addr $(LOADER_ENTRY) \
+		--entry-addr $(LOADER_ENTRY)
+	mv $@.new $@
 endef
 
 define Build/cfe-jffs2

@@ -18,7 +18,8 @@ DEVICE_VARS += SERCOMM_PID SERCOMM_VERSION
 define Device/bcm63xx-nand
   FILESYSTEMS := squashfs ubifs
   KERNEL := kernel-bin | append-dtb | relocate-kernel | lzma | cfe-jffs2-kernel
-  KERNEL_INITRAMFS := kernel-bin | append-dtb | lzma | loader-lzma elf
+  KERNEL_INITRAMFS := kernel-bin | append-dtb | relocate-kernel | lzma | cfe-bin-header $$(KERNEL_LOADADDR)
+  KERNEL_INITRAMFS_SUFFIX := .lz
   IMAGES := cfe.bin sysupgrade.bin
   IMAGE/cfe.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | cfe-jffs2-cferam | append-ubi | cfe-wfi-tag
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
