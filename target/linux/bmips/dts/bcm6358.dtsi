@@ -320,5 +320,70 @@
 
 			status = "disabled";
 		};
+
+		mdio0: mdio@fffe4010 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "brcm,bcm6348-mdio";
+			reg = <0xfffe4010 0x8>;
+		};
+
+		mdio1: mdio@fffe4810 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "brcm,bcm6348-mdio";
+			reg = <0xfffe4810 0x8>;
+		};
+
+		ethernet: ethernet@fffe5000 {
+			compatible = "brcm,bcm6348-iudma";
+			reg = <0xfffe5000 0x24>,
+			      <0xfffe5100 0x80>,
+			      <0xfffe5200 0x80>;
+			reg-names = "dma",
+				    "dma-channels",
+				    "dma-sram";
+
+			resets = <&periph_rst BCM6358_RST_ENET>,
+				 <&periph_rst BCM6358_RST_EPHY>;
+
+			status = "disabled";
+
+			ethernet0: ethernet@fffe4000 {
+				compatible = "brcm,bcm6348-enet";
+				reg = <0xfffe4000 0x2dc>;
+
+				clocks = <&periph_clk BCM6358_CLK_ENET0>;
+
+				interrupt-parent = <&periph_intc>;
+				interrupts = <BCM6358_IRQ_EMAC0_RX_DMA>,
+					     <BCM6358_IRQ_EMAC0_TX_DMA>;
+				interrupt-names = "rx",
+						  "tx";
+
+				dma-rx = <0>;
+				dma-tx = <1>;
+
+				status = "disabled";
+			};
+
+			ethernet1: ethernet@fffe4800 {
+				compatible = "brcm,bcm6348-enet";
+				reg = <0xfffe4800 0x2dc>;
+
+				clocks = <&periph_clk BCM6358_CLK_ENET1>;
+
+				interrupt-parent = <&periph_intc>;
+				interrupts = <BCM6358_IRQ_EMAC1_RX_DMA>,
+					     <BCM6358_IRQ_EMAC1_TX_DMA>;
+				interrupt-names = "rx",
+						  "tx";
+
+				dma-rx = <2>;
+				dma-tx = <3>;
+
+				status = "disabled";
+			};
+		};
 	};
 };
