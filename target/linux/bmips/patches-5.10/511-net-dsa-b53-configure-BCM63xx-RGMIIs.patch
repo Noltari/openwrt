@@ -15,11 +15,9 @@ Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
  drivers/net/dsa/b53/b53_regs.h   |  2 ++
  3 files changed, 41 insertions(+)
 
-diff --git a/drivers/net/dsa/b53/b53_common.c b/drivers/net/dsa/b53/b53_common.c
-index d3e5baa1ed5f..9adf72737506 100644
 --- a/drivers/net/dsa/b53/b53_common.c
 +++ b/drivers/net/dsa/b53/b53_common.c
-@@ -1190,6 +1190,37 @@ static void b53_force_port_config(struct b53_device *dev, int port,
+@@ -1140,6 +1140,37 @@ static void b53_force_port_config(struct
  	b53_write8(dev, B53_CTRL_PAGE, off, reg);
  }
  
@@ -57,7 +55,7 @@ index d3e5baa1ed5f..9adf72737506 100644
  static void b53_adjust_link(struct dsa_switch *ds, int port,
  			    struct phy_device *phydev)
  {
-@@ -1216,6 +1247,9 @@ static void b53_adjust_link(struct dsa_switch *ds, int port,
+@@ -1166,6 +1197,9 @@ static void b53_adjust_link(struct dsa_s
  			      tx_pause, rx_pause);
  	b53_force_link(dev, port, phydev->link);
  
@@ -67,7 +65,7 @@ index d3e5baa1ed5f..9adf72737506 100644
  	if (is531x5(dev) && phy_interface_is_rgmii(phydev)) {
  		if (port == 8)
  			off = B53_RGMII_CTRL_IMP;
-@@ -1408,6 +1442,9 @@ void b53_phylink_mac_link_up(struct dsa_switch *ds, int port,
+@@ -1358,6 +1392,9 @@ void b53_phylink_mac_link_up(struct dsa_
  {
  	struct b53_device *dev = ds->priv;
  
@@ -77,11 +75,9 @@ index d3e5baa1ed5f..9adf72737506 100644
  	if (mode == MLO_AN_PHY)
  		return;
  
-diff --git a/drivers/net/dsa/b53/b53_priv.h b/drivers/net/dsa/b53/b53_priv.h
-index 23497237129b..ac505beeb9e3 100644
 --- a/drivers/net/dsa/b53/b53_priv.h
 +++ b/drivers/net/dsa/b53/b53_priv.h
-@@ -224,6 +224,8 @@ static inline int is58xx(struct b53_device *dev)
+@@ -223,6 +223,8 @@ static inline int is58xx(struct b53_devi
  #define B53_CPU_PORT_25	5
  #define B53_CPU_PORT	8
  
@@ -90,11 +86,9 @@ index 23497237129b..ac505beeb9e3 100644
  static inline unsigned int b53_max_arl_entries(struct b53_device *dev)
  {
  	return dev->num_arl_buckets * dev->num_arl_bins;
-diff --git a/drivers/net/dsa/b53/b53_regs.h b/drivers/net/dsa/b53/b53_regs.h
-index b2c539a42154..5af8655b78f2 100644
 --- a/drivers/net/dsa/b53/b53_regs.h
 +++ b/drivers/net/dsa/b53/b53_regs.h
-@@ -138,9 +138,11 @@
+@@ -137,9 +137,11 @@
  
  #define B53_RGMII_CTRL_IMP		0x60
  #define   RGMII_CTRL_ENABLE_GMII	BIT(7)
@@ -106,6 +100,3 @@ index b2c539a42154..5af8655b78f2 100644
  
  #define B53_RGMII_CTRL_P(i)		(B53_RGMII_CTRL_IMP + (i))
  
--- 
-2.20.1
-
