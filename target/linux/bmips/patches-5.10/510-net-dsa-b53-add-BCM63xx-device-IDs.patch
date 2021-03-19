@@ -1,0 +1,102 @@
+From 62873610074829401f88442864648183dd99f9e0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Fri, 19 Mar 2021 20:07:36 +0100
+Subject: [PATCH 1/2] net: dsa: b53: add BCM63xx device IDs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add specific IDs in order to be able to apply different configurations
+to each SoC.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+---
+ drivers/net/dsa/b53/b53_mmap.c | 29 +++++++++++++++++++++++------
+ drivers/net/dsa/b53/b53_priv.h | 17 ++++++++++++++++-
+ 2 files changed, 39 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/dsa/b53/b53_mmap.c b/drivers/net/dsa/b53/b53_mmap.c
+index 82680e083cc2..cb83837bf839 100644
+--- a/drivers/net/dsa/b53/b53_mmap.c
++++ b/drivers/net/dsa/b53/b53_mmap.c
+@@ -248,7 +248,7 @@ static int b53_mmap_probe_of(struct platform_device *pdev,
+ 		return -ENOMEM;
+ 
+ 	pdata->regs = mem;
+-	pdata->chip_id = BCM63XX_DEVICE_ID;
++	pdata->chip_id = (u32)device_get_match_data(dev);
+ 	pdata->big_endian = of_property_read_bool(np, "big-endian");
+ 
+ 	of_ports = of_get_child_by_name(np, "ports");
+@@ -320,11 +320,28 @@ static int b53_mmap_remove(struct platform_device *pdev)
+ }
+ 
+ static const struct of_device_id b53_mmap_of_table[] = {
+-	{ .compatible = "brcm,bcm3384-switch" },
+-	{ .compatible = "brcm,bcm6328-switch" },
+-	{ .compatible = "brcm,bcm6368-switch" },
+-	{ .compatible = "brcm,bcm63xx-switch" },
+-	{ /* sentinel */ },
++	{
++		.compatible = "brcm,bcm3384-switch",
++		.data = (void *)BCM63XX_DEVICE_ID,
++	}, {
++		.compatible = "brcm,bcm6318-switch",
++		.data = (void *)BCM6318_DEVICE_ID,
++	}, {
++		.compatible = "brcm,bcm6328-switch",
++		.data = (void *)BCM6328_DEVICE_ID,
++	}, {
++		.compatible = "brcm,bcm6362-switch",
++		.data = (void *)BCM6362_DEVICE_ID,
++	}, {
++		.compatible = "brcm,bcm6368-switch",
++		.data = (void *)BCM6368_DEVICE_ID,
++	}, {
++		.compatible = "brcm,bcm63268-switch",
++		.data = (void *)BCM63268_DEVICE_ID,
++	}, {
++		.compatible = "brcm,bcm63xx-switch",
++		.data = (void *)BCM63XX_DEVICE_ID,
++	}, { /* sentinel */ }
+ };
+ MODULE_DEVICE_TABLE(of, b53_mmap_of_table);
+ 
+diff --git a/drivers/net/dsa/b53/b53_priv.h b/drivers/net/dsa/b53/b53_priv.h
+index 82700a5714c1..23497237129b 100644
+--- a/drivers/net/dsa/b53/b53_priv.h
++++ b/drivers/net/dsa/b53/b53_priv.h
+@@ -75,6 +75,11 @@ enum {
+ 	BCM53125_DEVICE_ID = 0x53125,
+ 	BCM53128_DEVICE_ID = 0x53128,
+ 	BCM63XX_DEVICE_ID = 0x6300,
++	BCM6318_DEVICE_ID = 0x6318,
++	BCM6328_DEVICE_ID = 0x6328,
++	BCM6362_DEVICE_ID = 0x6362,
++	BCM6368_DEVICE_ID = 0x6368,
++	BCM63268_DEVICE_ID = 0x63268,
+ 	BCM53010_DEVICE_ID = 0x53010,
+ 	BCM53011_DEVICE_ID = 0x53011,
+ 	BCM53012_DEVICE_ID = 0x53012,
+@@ -186,7 +191,17 @@ static inline int is531x5(struct b53_device *dev)
+ 
+ static inline int is63xx(struct b53_device *dev)
+ {
+-	return dev->chip_id == BCM63XX_DEVICE_ID;
++	return dev->chip_id == BCM63XX_DEVICE_ID ||
++		dev->chip_id == BCM6318_DEVICE_ID ||
++		dev->chip_id == BCM6328_DEVICE_ID ||
++		dev->chip_id == BCM6362_DEVICE_ID ||
++		dev->chip_id == BCM6368_DEVICE_ID ||
++		dev->chip_id == BCM63268_DEVICE_ID;
++}
++
++static inline int is63268(struct b53_device *dev)
++{
++	return dev->chip_id == BCM63268_DEVICE_ID;
+ }
+ 
+ static inline int is5301x(struct b53_device *dev)
+-- 
+2.20.1
+

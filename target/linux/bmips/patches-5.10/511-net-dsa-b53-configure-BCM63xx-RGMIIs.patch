@@ -1,0 +1,111 @@
+From 014df30d996ed66922d818ed0b8eded03eb93d7b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Fri, 19 Mar 2021 20:30:11 +0100
+Subject: [PATCH 2/2] net: dsa: b53: configure BCM63xx RGMIIs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+BCM63xx RGMIIs need specific configuration to operate.
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+---
+ drivers/net/dsa/b53/b53_common.c | 37 ++++++++++++++++++++++++++++++++
+ drivers/net/dsa/b53/b53_priv.h   |  2 ++
+ drivers/net/dsa/b53/b53_regs.h   |  2 ++
+ 3 files changed, 41 insertions(+)
+
+diff --git a/drivers/net/dsa/b53/b53_common.c b/drivers/net/dsa/b53/b53_common.c
+index d3e5baa1ed5f..9adf72737506 100644
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -1190,6 +1190,37 @@ static void b53_force_port_config(struct b53_device *dev, int port,
+ 	b53_write8(dev, B53_CTRL_PAGE, off, reg);
+ }
+ 
++static void b53_adjust_63xx_rgmii(struct dsa_switch *ds, int port,
++				  phy_interface_t interface)
++{
++	struct b53_device *dev = ds->priv;
++	u8 rgmii_ctrl = 0, off;
++
++	if (port == dev->cpu_port)
++		off = B53_RGMII_CTRL_IMP;
++	else
++		off = B53_RGMII_CTRL_P(port);
++
++	b53_read8(dev, B53_CTRL_PAGE, off, &rgmii_ctrl);
++
++	if (interface == PHY_INTERFACE_MODE_RGMII_ID)
++		rgmii_ctrl |= RGMII_CTRL_TIMING_SEL_63XX;
++	else
++		rgmii_ctrl &= ~RGMII_CTRL_TIMING_SEL_63XX;
++
++	if (port != dev->cpu_port) {
++		if (is63268(dev))
++			rgmii_ctrl |= RGMII_CTRL_MII_OVERRIDE;
++
++		rgmii_ctrl |= RGMII_CTRL_ENABLE_GMII;
++	}
++
++	b53_write8(dev, B53_CTRL_PAGE, off, rgmii_ctrl);
++
++	dev_info(ds->dev, "Configured port %d for %s\n", port,
++		 phy_modes(interface));
++}
++
+ static void b53_adjust_link(struct dsa_switch *ds, int port,
+ 			    struct phy_device *phydev)
+ {
+@@ -1216,6 +1247,9 @@ static void b53_adjust_link(struct dsa_switch *ds, int port,
+ 			      tx_pause, rx_pause);
+ 	b53_force_link(dev, port, phydev->link);
+ 
++	if (is63xx(dev) && port >= B53_BCM63XX_RGMII0)
++		b53_adjust_63xx_rgmii(ds, port, phydev->interface);
++
+ 	if (is531x5(dev) && phy_interface_is_rgmii(phydev)) {
+ 		if (port == 8)
+ 			off = B53_RGMII_CTRL_IMP;
+@@ -1408,6 +1442,9 @@ void b53_phylink_mac_link_up(struct dsa_switch *ds, int port,
+ {
+ 	struct b53_device *dev = ds->priv;
+ 
++	if (is63xx(dev) && port >= B53_BCM63XX_RGMII0)
++		b53_adjust_63xx_rgmii(ds, port, interface);
++
+ 	if (mode == MLO_AN_PHY)
+ 		return;
+ 
+diff --git a/drivers/net/dsa/b53/b53_priv.h b/drivers/net/dsa/b53/b53_priv.h
+index 23497237129b..ac505beeb9e3 100644
+--- a/drivers/net/dsa/b53/b53_priv.h
++++ b/drivers/net/dsa/b53/b53_priv.h
+@@ -224,6 +224,8 @@ static inline int is58xx(struct b53_device *dev)
+ #define B53_CPU_PORT_25	5
+ #define B53_CPU_PORT	8
+ 
++#define B53_BCM63XX_RGMII0	4
++
+ static inline unsigned int b53_max_arl_entries(struct b53_device *dev)
+ {
+ 	return dev->num_arl_buckets * dev->num_arl_bins;
+diff --git a/drivers/net/dsa/b53/b53_regs.h b/drivers/net/dsa/b53/b53_regs.h
+index b2c539a42154..5af8655b78f2 100644
+--- a/drivers/net/dsa/b53/b53_regs.h
++++ b/drivers/net/dsa/b53/b53_regs.h
+@@ -138,9 +138,11 @@
+ 
+ #define B53_RGMII_CTRL_IMP		0x60
+ #define   RGMII_CTRL_ENABLE_GMII	BIT(7)
++#define   RGMII_CTRL_MII_OVERRIDE	BIT(6)
+ #define   RGMII_CTRL_TIMING_SEL		BIT(2)
+ #define   RGMII_CTRL_DLL_RXC		BIT(1)
+ #define   RGMII_CTRL_DLL_TXC		BIT(0)
++#define   RGMII_CTRL_TIMING_SEL_63XX	BIT(0)
+ 
+ #define B53_RGMII_CTRL_P(i)		(B53_RGMII_CTRL_IMP + (i))
+ 
+-- 
+2.20.1
+
