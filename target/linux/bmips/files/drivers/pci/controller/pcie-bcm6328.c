@@ -80,6 +80,7 @@
 #define PCIE_DEVICE_OFFSET		0x8000
 
 struct bcm6328_pcie {
+	struct device *dev;
 	void __iomem *base;
 	int irq;
 	struct regmap *serdes;
@@ -93,14 +94,10 @@ struct bcm6328_pcie {
 	struct reset_control *reset_hard;
 };
 
-static struct bcm6328_pcie bcm6328_pcie;
-
-extern int bmips_pci_irq;
-
 /*
  * swizzle 32bits data to return only the needed part
  */
-static int postprocess_read(u32 data, int where, unsigned int size)
+static inline int postprocess_read(u32 data, int where, unsigned int size)
 {
 	u32 ret = 0;
 
@@ -119,7 +116,7 @@ static int postprocess_read(u32 data, int where, unsigned int size)
 	return ret;
 }
 
-static int preprocess_write(u32 orig_data, u32 val, int where,
+static inline int preprocess_write(u32 orig_data, u32 val, int where,
 			    unsigned int size)
 {
 	u32 ret = 0;
@@ -141,16 +138,16 @@ static int preprocess_write(u32 orig_data, u32 val, int where,
 	return ret;
 }
 
-static int bcm6328_pcie_can_access(struct pci_bus *bus, int devfn)
+static inline int bcm6328_pcie_can_access(struct pci_bus *bus, int devfn)
 {
-	struct bcm6328_pcie *priv = &bcm6328_pcie;
+	struct bcm6328_pcie *pcie = bus->sysdata;
 
 	switch (bus->number) {
 	case PCIE_BUS_BRIDGE:
 		return PCI_SLOT(devfn) == 0;
 	case PCIE_BUS_DEVICE:
 		if (PCI_SLOT(devfn) == 0)
-			return __raw_readl(priv->base + PCIE_DLSTATUS_REG)
+			return __raw_readl(pcie->base + PCIE_DLSTATUS_REG)
 			       & DLSTATUS_PHYLINKUP;
 		fallthrough;
 	default:
@@ -161,7 +158,7 @@ static int bcm6328_pcie_can_access(struct pci_bus *bus, int devfn)
 static int bcm6328_pcie_read(struct pci_bus *bus, unsigned int devfn,
 			     int where, int size, u32 *val)
 {
-	struct bcm6328_pcie *priv = &bcm6328_pcie;
+	struct bcm6328_pcie *pcie = bus->sysdata;
 	u32 data;
 	u32 reg = where & ~3;
 
@@ -171,7 +168,7 @@ static int bcm6328_pcie_read(struct pci_bus *bus, unsigned int devfn,
 	if (bus->number == PCIE_BUS_DEVICE)
 		reg += PCIE_DEVICE_OFFSET;
 
-	data = __raw_readl(priv->base + reg);
+	data = __raw_readl(pcie->base + reg);
 	*val = postprocess_read(data, where, size);
 
 	return PCIBIOS_SUCCESSFUL;
@@ -180,7 +177,7 @@ static int bcm6328_pcie_read(struct pci_bus *bus, unsigned int devfn,
 static int bcm6328_pcie_write(struct pci_bus *bus, unsigned int devfn,
 			      int where, int size, u32 val)
 {
-	struct bcm6328_pcie *priv = &bcm6328_pcie;
+	struct bcm6328_pcie *pcie = bus->sysdata;
 	u32 data;
 	u32 reg = where & ~3;
 
@@ -190,9 +187,9 @@ static int bcm6328_pcie_write(struct pci_bus *bus, unsigned int devfn,
 	if (bus->number == PCIE_BUS_DEVICE)
 		reg += PCIE_DEVICE_OFFSET;
 
-	data = __raw_readl(priv->base + reg);
+	data = __raw_readl(pcie->base + reg);
 	data = preprocess_write(data, val, where, size);
-	__raw_writel(data, priv->base + reg);
+	__raw_writel(data, pcie->base + reg);
 
 	return PCIBIOS_SUCCESSFUL;
 }
@@ -202,125 +199,139 @@ static struct pci_ops bcm6328_pcie_ops = {
 	.write = bcm6328_pcie_write,
 };
 
-static struct resource bcm6328_pcie_io_resource;
-static struct resource bcm6328_pcie_mem_resource;
-static struct resource bcm6328_pcie_busn_resource;
-
-static struct pci_controller bcm6328_pcie_controller = {
-	.pci_ops = &bcm6328_pcie_ops,
-	.io_resource = &bcm6328_pcie_io_resource,
-	.mem_resource = &bcm6328_pcie_mem_resource,
-};
-
-static void bcm6328_pcie_reset(struct bcm6328_pcie *priv)
+static void bcm6328_pcie_reset(struct bcm6328_pcie *pcie)
 {
-	regmap_write_bits(priv->serdes, 0,
+	regmap_write_bits(pcie->serdes, 0,
 			  SERDES_PCIE_EXD_EN | SERDES_PCIE_EN,
 			  SERDES_PCIE_EXD_EN | SERDES_PCIE_EN);
 
-	reset_control_assert(priv->reset);
-	reset_control_assert(priv->reset_core);
-	reset_control_assert(priv->reset_ext);
-	if (priv->reset_hard) {
-		reset_control_assert(priv->reset_hard);
+	reset_control_assert(pcie->reset);
+	reset_control_assert(pcie->reset_core);
+	reset_control_assert(pcie->reset_ext);
+	if (pcie->reset_hard) {
+		reset_control_assert(pcie->reset_hard);
 		mdelay(10);
-		reset_control_deassert(priv->reset_hard);
+		reset_control_deassert(pcie->reset_hard);
 	}
 	mdelay(10);
 
-	reset_control_deassert(priv->reset_core);
-	reset_control_deassert(priv->reset);
+	reset_control_deassert(pcie->reset_core);
+	reset_control_deassert(pcie->reset);
 	mdelay(10);
 
-	reset_control_deassert(priv->reset_ext);
+	reset_control_deassert(pcie->reset_ext);
 	mdelay(200);
 }
 
-static void bcm6328_pcie_setup(struct bcm6328_pcie *priv)
+static void bcm6328_pcie_setup(struct pci_host_bridge *host, struct bcm6328_pcie *pcie)
 {
+	struct resource *mem_res = NULL;
+	struct resource_entry *win, *tmp;
 	u32 val;
 
-	val = __raw_readl(priv->base + PCIE_BRIDGE_OPT1_REG);
+	resource_list_for_each_entry_safe(win, tmp, &host->windows) {
+		struct resource *res = win->res;
+
+		switch (resource_type(res)) {
+		case IORESOURCE_MEM:
+			mem_res = res;
+			break;
+		}
+	}
+
+	val = __raw_readl(pcie->base + PCIE_BRIDGE_OPT1_REG);
 	val |= OPT1_RD_BE_OPT_EN;
 	val |= OPT1_RD_REPLY_BE_FIX_EN;
 	val |= OPT1_PCIE_BRIDGE_HOLE_DET_EN;
 	val |= OPT1_L1_INT_STATUS_MASK_POL;
-	__raw_writel(val, priv->base + PCIE_BRIDGE_OPT1_REG);
+	__raw_writel(val, pcie->base + PCIE_BRIDGE_OPT1_REG);
 
-	val = __raw_readl(priv->base + PCIE_BRIDGE_RC_INT_MASK_REG);
+	val = __raw_readl(pcie->base + PCIE_BRIDGE_RC_INT_MASK_REG);
 	val |= PCIE_RC_INT_A;
 	val |= PCIE_RC_INT_B;
 	val |= PCIE_RC_INT_C;
 	val |= PCIE_RC_INT_D;
-	__raw_writel(val, priv->base + PCIE_BRIDGE_RC_INT_MASK_REG);
+	__raw_writel(val, pcie->base + PCIE_BRIDGE_RC_INT_MASK_REG);
 
-	val = __raw_readl(priv->base + PCIE_BRIDGE_OPT2_REG);
+	val = __raw_readl(pcie->base + PCIE_BRIDGE_OPT2_REG);
 	/* enable credit checking and error checking */
 	val |= OPT2_TX_CREDIT_CHK_EN;
 	val |= OPT2_UBUS_UR_DECODE_DIS;
 	/* set device bus/func for the pcie device */
 	val |= (PCIE_BUS_DEVICE << OPT2_CFG_TYPE1_BUS_NO_SHIFT);
 	val |= OPT2_CFG_TYPE1_BD_SEL;
-	__raw_writel(val, priv->base + PCIE_BRIDGE_OPT2_REG);
+	__raw_writel(val, pcie->base + PCIE_BRIDGE_OPT2_REG);
 
 	/* setup class code as bridge */
-	val = __raw_readl(priv->base + PCIE_IDVAL3_REG);
+	val = __raw_readl(pcie->base + PCIE_IDVAL3_REG);
 	val &= ~IDVAL3_CLASS_CODE_MASK;
 	val |= (PCI_CLASS_BRIDGE_PCI << IDVAL3_SUBCLASS_SHIFT);
-	__raw_writel(val, priv->base + PCIE_IDVAL3_REG);
+	__raw_writel(val, pcie->base + PCIE_IDVAL3_REG);
 
 	/* disable bar1 size */
-	val = __raw_readl(priv->base + PCIE_CONFIG2_REG);
+	val = __raw_readl(pcie->base + PCIE_CONFIG2_REG);
 	val &= ~CONFIG2_BAR1_SIZE_MASK;
-	__raw_writel(val, priv->base + PCIE_CONFIG2_REG);
+	__raw_writel(val, pcie->base + PCIE_CONFIG2_REG);
 
-	/* set bar0 to little endian */
-	val = (bcm6328_pcie_mem_resource.start >> 20)
-	      << BASEMASK_BASE_SHIFT;
-	val |= (bcm6328_pcie_mem_resource.end >> 20) << BASEMASK_MASK_SHIFT;
-	val |= BASEMASK_REMAP_EN;
-	__raw_writel(val, priv->base + PCIE_BRIDGE_BAR0_BASEMASK_REG);
+	if (mem_res) {
+		/* set bar0 to little endian */
+		val = (mem_res->start >> 20)
+			  << BASEMASK_BASE_SHIFT;
+		val |= (mem_res->end >> 20) << BASEMASK_MASK_SHIFT;
+		val |= BASEMASK_REMAP_EN;
+		__raw_writel(val, pcie->base + PCIE_BRIDGE_BAR0_BASEMASK_REG);
 
-	val = (bcm6328_pcie_mem_resource.start >> 20)
-	      << REBASE_ADDR_BASE_SHIFT;
-	__raw_writel(val, priv->base + PCIE_BRIDGE_BAR0_REBASE_ADDR_REG);
+		val = (mem_res->start >> 20)
+			  << REBASE_ADDR_BASE_SHIFT;
+		__raw_writel(val, pcie->base + PCIE_BRIDGE_BAR0_REBASE_ADDR_REG);
+	}
 }
 
 static int bcm6328_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
-	struct bcm6328_pcie *priv = &bcm6328_pcie;
+	struct bcm6328_pcie *pcie;
+	struct pci_host_bridge *host;
 	struct resource *res;
-	unsigned int i;
 	int ret;
 	LIST_HEAD(resources);
+
+	host = devm_pci_alloc_host_bridge(dev, sizeof(*pcie));
+	if (!host)
+		return -ENOMEM;
+
+	pcie = pci_host_bridge_priv(host);
+	pcie->dev = dev;
+	platform_set_drvdata(pdev, pcie);
 
 	pm_runtime_enable(dev);
 	pm_runtime_no_callbacks(dev);
 
-	priv->num_pms = of_count_phandle_with_args(np, "power-domains",
+	pcie->num_pms = of_count_phandle_with_args(np, "power-domains",
 						   "#power-domain-cells");
-	if (priv->num_pms > 1) {
-		priv->pm = devm_kcalloc(dev, priv->num_pms,
+	if (pcie->num_pms > 1) {
+		unsigned int i;
+
+		pcie->pm = devm_kcalloc(dev, pcie->num_pms,
 					sizeof(struct device *), GFP_KERNEL);
-		if (!priv->pm)
+		if (!pcie->pm)
 			return -ENOMEM;
 
-		priv->link_pm = devm_kcalloc(dev, priv->num_pms,
+		pcie->link_pm = devm_kcalloc(dev, pcie->num_pms,
 					     sizeof(struct device_link *),
 					     GFP_KERNEL);
-		if (!priv->link_pm)
+		if (!pcie->link_pm)
 			return -ENOMEM;
 
-		for (i = 0; i < priv->num_pms; i++) {
-			priv->pm[i] = genpd_dev_pm_attach_by_id(dev, i);
-			if (IS_ERR(priv->pm[i])) {
+		for (i = 0; i < pcie->num_pms; i++) {
+			pcie->pm[i] = genpd_dev_pm_attach_by_id(dev, i);
+			if (IS_ERR(pcie->pm[i])) {
 				dev_err(dev, "error getting pm %d\n", i);
 				return -EINVAL;
 			}
 
-			priv->link_pm[i] = device_link_add(dev, priv->pm[i],
+			pcie->link_pm[i] = device_link_add(dev, pcie->pm[i],
 				DL_FLAG_STATELESS | DL_FLAG_PM_RUNTIME |
 				DL_FLAG_RPM_ACTIVE);
 		}
@@ -336,57 +347,55 @@ static int bcm6328_pcie_probe(struct platform_device *pdev)
 	of_pci_check_probe_only();
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	priv->base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(priv->base))
-		return PTR_ERR(priv->base);
+	pcie->base = devm_ioremap_resource(dev, res);
+	if (IS_ERR(pcie->base))
+		return PTR_ERR(pcie->base);
 
-	priv->irq = platform_get_irq(pdev, 0);
-	if (!priv->irq)
+	pcie->irq = platform_get_irq(pdev, 0);
+	if (!pcie->irq)
 		return -ENODEV;
 
-	bmips_pci_irq = priv->irq;
+	pcie->serdes = syscon_regmap_lookup_by_phandle(np, "brcm,serdes");
+	if (IS_ERR(pcie->serdes))
+		return PTR_ERR(pcie->serdes);
 
-	priv->serdes = syscon_regmap_lookup_by_phandle(np, "brcm,serdes");
-	if (IS_ERR(priv->serdes))
-		return PTR_ERR(priv->serdes);
+	pcie->reset = devm_reset_control_get(dev, "pcie");
+	if (IS_ERR(pcie->reset))
+		return PTR_ERR(pcie->reset);
 
-	priv->reset = devm_reset_control_get(dev, "pcie");
-	if (IS_ERR(priv->reset))
-		return PTR_ERR(priv->reset);
+	pcie->reset_ext = devm_reset_control_get(dev, "pcie-ext");
+	if (IS_ERR(pcie->reset_ext))
+		return PTR_ERR(pcie->reset_ext);
 
-	priv->reset_ext = devm_reset_control_get(dev, "pcie-ext");
-	if (IS_ERR(priv->reset_ext))
-		return PTR_ERR(priv->reset_ext);
+	pcie->reset_core = devm_reset_control_get(dev, "pcie-core");
+	if (IS_ERR(pcie->reset_core))
+		return PTR_ERR(pcie->reset_core);
 
-	priv->reset_core = devm_reset_control_get(dev, "pcie-core");
-	if (IS_ERR(priv->reset_core))
-		return PTR_ERR(priv->reset_core);
+	pcie->reset_hard = devm_reset_control_get_optional(dev, "pcie-hard");
+	if (IS_ERR(pcie->reset_hard))
+		return PTR_ERR(pcie->reset_hard);
 
-	priv->reset_hard = devm_reset_control_get_optional(dev, "pcie-hard");
-	if (IS_ERR(priv->reset_hard))
-		return PTR_ERR(priv->reset_hard);
+	pcie->clk = devm_clk_get(dev, "pcie");
+	if (IS_ERR(pcie->clk))
+		return PTR_ERR(pcie->clk);
 
-	priv->clk = devm_clk_get(dev, "pcie");
-	if (IS_ERR(priv->clk))
-		return PTR_ERR(priv->clk);
-
-	ret = clk_prepare_enable(priv->clk);
+	ret = clk_prepare_enable(pcie->clk);
 	if (ret) {
 		dev_err(dev, "could not enable clock\n");
 		return ret;
 	}
 
-	pci_load_of_ranges(&bcm6328_pcie_controller, np);
-	if (!bcm6328_pcie_mem_resource.start)
+	bcm6328_pcie_reset(pcie);
+	bcm6328_pcie_setup(host, pcie);
+
+	host->ops = &bcm6328_pcie_ops;
+	host->sysdata = pcie;
+
+	ret = pci_host_probe(host);
+	if (ret) {
+		dev_err(dev, "error probbing PCI\n");
 		return -EINVAL;
-
-	of_pci_parse_bus_range(np, &bcm6328_pcie_busn_resource);
-	pci_add_resource(&resources, &bcm6328_pcie_busn_resource);
-
-	bcm6328_pcie_reset(priv);
-	bcm6328_pcie_setup(priv);
-
-	register_pci_controller(&bcm6328_pcie_controller);
+	}
 
 	return 0;
 }
@@ -407,8 +416,10 @@ static struct platform_driver bcm6328_pcie_driver = {
 int __init bcm6328_pcie_init(void)
 {
 	int ret = platform_driver_register(&bcm6328_pcie_driver);
+
 	if (ret)
 		pr_err("pci-bcm6328: Error registering platform driver!\n");
+
 	return ret;
 }
 late_initcall_sync(bcm6328_pcie_init);
