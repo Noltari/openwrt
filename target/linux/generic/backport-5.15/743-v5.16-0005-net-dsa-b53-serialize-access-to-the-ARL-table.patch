@@ -1,0 +1,160 @@
+From f7eb4a1c0864821fe99edf12aca09739f9cbd7a4 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Sun, 24 Oct 2021 20:17:52 +0300
+Subject: [PATCH] net: dsa: b53: serialize access to the ARL table
+
+The b53 driver performs non-atomic transactions to the ARL table when
+adding, deleting and reading FDB and MDB entries.
+
+Traditionally these were all serialized by the rtnl_lock(), but now it
+is possible that DSA calls ->port_fdb_add and ->port_fdb_del without
+holding that lock.
+
+So the driver must have its own serialization logic. Add a mutex and
+hold it from all entry points (->port_fdb_{add,del,dump},
+->port_mdb_{add,del}).
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+Reviewed-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/b53/b53_common.c | 36 +++++++++++++++++++++++++-------
+ drivers/net/dsa/b53/b53_priv.h   |  1 +
+ 2 files changed, 30 insertions(+), 7 deletions(-)
+
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -1542,7 +1542,7 @@ int b53_vlan_del(struct dsa_switch *ds,
+ }
+ EXPORT_SYMBOL(b53_vlan_del);
+ 
+-/* Address Resolution Logic routines */
++/* Address Resolution Logic routines. Caller must hold &dev->arl_mutex. */
+ static int b53_arl_op_wait(struct b53_device *dev)
+ {
+ 	unsigned int timeout = 10;
+@@ -1707,6 +1707,7 @@ int b53_fdb_add(struct dsa_switch *ds, i
+ 		const unsigned char *addr, u16 vid)
+ {
+ 	struct b53_device *priv = ds->priv;
++	int ret;
+ 
+ 	/* 5325 and 5365 require some more massaging, but could
+ 	 * be supported eventually
+@@ -1714,7 +1715,11 @@ int b53_fdb_add(struct dsa_switch *ds, i
+ 	if (is5325(priv) || is5365(priv))
+ 		return -EOPNOTSUPP;
+ 
+-	return b53_arl_op(priv, 0, port, addr, vid, true);
++	mutex_lock(&priv->arl_mutex);
++	ret = b53_arl_op(priv, 0, port, addr, vid, true);
++	mutex_unlock(&priv->arl_mutex);
++
++	return ret;
+ }
+ EXPORT_SYMBOL(b53_fdb_add);
+ 
+@@ -1722,8 +1727,13 @@ int b53_fdb_del(struct dsa_switch *ds, i
+ 		const unsigned char *addr, u16 vid)
+ {
+ 	struct b53_device *priv = ds->priv;
++	int ret;
+ 
+-	return b53_arl_op(priv, 0, port, addr, vid, false);
++	mutex_lock(&priv->arl_mutex);
++	ret = b53_arl_op(priv, 0, port, addr, vid, false);
++	mutex_unlock(&priv->arl_mutex);
++
++	return ret;
+ }
+ EXPORT_SYMBOL(b53_fdb_del);
+ 
+@@ -1780,6 +1790,8 @@ int b53_fdb_dump(struct dsa_switch *ds,
+ 	int ret;
+ 	u8 reg;
+ 
++	mutex_lock(&priv->arl_mutex);
++
+ 	/* Start search operation */
+ 	reg = ARL_SRCH_STDN;
+ 	b53_write8(priv, B53_ARLIO_PAGE, B53_ARL_SRCH_CTL, reg);
+@@ -1787,18 +1799,18 @@ int b53_fdb_dump(struct dsa_switch *ds,
+ 	do {
+ 		ret = b53_arl_search_wait(priv);
+ 		if (ret)
+-			return ret;
++			break;
+ 
+ 		b53_arl_search_rd(priv, 0, &results[0]);
+ 		ret = b53_fdb_copy(port, &results[0], cb, data);
+ 		if (ret)
+-			return ret;
++			break;
+ 
+ 		if (priv->num_arl_bins > 2) {
+ 			b53_arl_search_rd(priv, 1, &results[1]);
+ 			ret = b53_fdb_copy(port, &results[1], cb, data);
+ 			if (ret)
+-				return ret;
++				break;
+ 
+ 			if (!results[0].is_valid && !results[1].is_valid)
+ 				break;
+@@ -1806,6 +1818,8 @@ int b53_fdb_dump(struct dsa_switch *ds,
+ 
+ 	} while (count++ < b53_max_arl_entries(priv) / 2);
+ 
++	mutex_unlock(&priv->arl_mutex);
++
+ 	return 0;
+ }
+ EXPORT_SYMBOL(b53_fdb_dump);
+@@ -1814,6 +1828,7 @@ int b53_mdb_add(struct dsa_switch *ds, i
+ 		const struct switchdev_obj_port_mdb *mdb)
+ {
+ 	struct b53_device *priv = ds->priv;
++	int ret;
+ 
+ 	/* 5325 and 5365 require some more massaging, but could
+ 	 * be supported eventually
+@@ -1821,7 +1836,11 @@ int b53_mdb_add(struct dsa_switch *ds, i
+ 	if (is5325(priv) || is5365(priv))
+ 		return -EOPNOTSUPP;
+ 
+-	return b53_arl_op(priv, 0, port, mdb->addr, mdb->vid, true);
++	mutex_lock(&priv->arl_mutex);
++	ret = b53_arl_op(priv, 0, port, mdb->addr, mdb->vid, true);
++	mutex_unlock(&priv->arl_mutex);
++
++	return ret;
+ }
+ EXPORT_SYMBOL(b53_mdb_add);
+ 
+@@ -1831,7 +1850,9 @@ int b53_mdb_del(struct dsa_switch *ds, i
+ 	struct b53_device *priv = ds->priv;
+ 	int ret;
+ 
++	mutex_lock(&priv->arl_mutex);
+ 	ret = b53_arl_op(priv, 0, port, mdb->addr, mdb->vid, false);
++	mutex_unlock(&priv->arl_mutex);
+ 	if (ret)
+ 		dev_err(ds->dev, "failed to delete MDB entry\n");
+ 
+@@ -2669,6 +2690,7 @@ struct b53_device *b53_switch_alloc(stru
+ 
+ 	mutex_init(&dev->reg_mutex);
+ 	mutex_init(&dev->stats_mutex);
++	mutex_init(&dev->arl_mutex);
+ 
+ 	return dev;
+ }
+--- a/drivers/net/dsa/b53/b53_priv.h
++++ b/drivers/net/dsa/b53/b53_priv.h
+@@ -107,6 +107,7 @@ struct b53_device {
+ 
+ 	struct mutex reg_mutex;
+ 	struct mutex stats_mutex;
++	struct mutex arl_mutex;
+ 	const struct b53_io_ops *ops;
+ 
+ 	/* chip specific data */
