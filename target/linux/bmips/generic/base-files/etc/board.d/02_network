@@ -14,6 +14,10 @@ comtrend,vr-3025u)
 huawei,hg556a-b)
 	ucidef_set_interface_lan "eth0"
 	;;
+sfr,neufbox-4-foxconn |\
+sfr,neufbox-4-sercomm)
+	ucidef_set_interface_lan "eth0 eth1"
+	;;
 esac
 
 board_config_flush

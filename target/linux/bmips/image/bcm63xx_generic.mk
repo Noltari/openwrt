@@ -72,3 +72,27 @@ define Device/huawei_hg556a-b
   DEVICE_PACKAGES += $(USB2_PACKAGES) $(ATH9K_PACKAGES)
 endef
 TARGET_DEVICES += huawei_hg556a-b
+
+define Device/sfr_neufbox-4-foxconn
+  $(Device/bcm63xx-cfe-legacy)
+  DEVICE_VENDOR := SFR
+  DEVICE_MODEL := Neufbox 4
+  DEVICE_VARIANT := Foxconn
+  CFE_BOARD_ID := 96358VW
+  CHIP_ID := 6358
+  CFE_EXTRAS += --rsa-signature "$(VERSION_DIST)-$(firstword $(subst -,$(space),$(REVISION)))"
+  DEVICE_PACKAGES := -ethtool -ppp -ppp-mod-pppoe -ip6tables -odhcp6c -kmod-ipv6 -kmod-ip6tables -odhcpd-ipv6only
+endef
+TARGET_DEVICES += sfr_neufbox-4-foxconn
+
+define Device/sfr_neufbox-4-sercomm
+  $(Device/bcm63xx-cfe-legacy)
+  DEVICE_VENDOR := SFR
+  DEVICE_MODEL := Neufbox 4
+  DEVICE_VARIANT := Sercomm
+  CFE_BOARD_ID := 96358VW
+  CHIP_ID := 6358
+  CFE_EXTRAS += --rsa-signature "$(VERSION_DIST)-$(firstword $(subst -,$(space),$(REVISION)))"
+  DEVICE_PACKAGES := -ethtool -ppp -ppp-mod-pppoe -ip6tables -odhcp6c -kmod-ipv6 -kmod-ip6tables -odhcpd-ipv6only
+endef
+TARGET_DEVICES += sfr_neufbox-4-sercomm

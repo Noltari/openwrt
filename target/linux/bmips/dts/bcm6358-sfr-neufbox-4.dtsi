@@ -1,0 +1,171 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include "bcm6358.dtsi"
+
+/ {
+	keys {
+		compatible = "gpio-keys-polled";
+		poll-interval = <20>;
+
+		service {
+			label = "service";
+			gpios = <&gpio 27 GPIO_ACTIVE_HIGH>;
+			linux,code = <BTN_0>;
+			debounce-interval = <60>;
+		};
+
+		clip {
+			label = "clip";
+			gpios = <&gpio 31 GPIO_ACTIVE_HIGH>;
+			linux,code = <BTN_1>;
+			debounce-interval = <60>;
+		};
+
+		restart {
+			label = "restart";
+			gpios = <&gpio 34 KEY_RESTART>;
+			linux,code = <KEY_RESTART>;
+			debounce-interval = <60>;
+		};
+
+		wps {
+			label = "WPS";
+			gpios = <&gpio 37 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_WPS_BUTTON>;
+			debounce-interval = <60>;
+		};
+	};
+};
+
+&leds {
+	status = "okay";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_serial_led>;
+
+	led@0 {
+		reg = <0>;
+		active-low;
+		label = "white:alarm";
+	};
+
+	led@2 {
+		reg = <2>;
+		active-low;
+		label = "white:tv";
+	};
+
+	led@3 {
+		reg = <3>;
+		active-low;
+		label = "white:tel";
+	};
+
+	led@4 {
+		reg = <4>;
+		active-low;
+		label = "white:adsl";
+	};
+};
+
+&ehci {
+	status = "okay";
+};
+
+&ethernet0 {
+	status = "okay";
+
+	nvmem-cells = <&macaddr_cfe_6a0>;
+	nvmem-cell-names = "mac-address";
+
+	phy-handle = <&phy1>;
+	phy-mode = "mii";
+};
+
+&ethernet1 {
+	status = "okay";
+
+	nvmem-cells = <&macaddr_cfe_6a0>;
+	nvmem-cell-names = "mac-address";
+	mac-address-increment = <1>;
+
+	phy-mode = "mii";
+
+	fixed-link {
+		speed = <100>;
+		full-duplex;
+	};
+};
+
+&iudma {
+	status = "okay";
+};
+
+&mdio0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	reg = <0>;
+
+	phy1: ethernet-phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <1>;
+	};
+};
+
+&ohci {
+	status = "okay";
+};
+
+&pci {
+	status = "okay";
+};
+
+&pflash {
+	status = "okay";
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		cfe: partition@0 {
+			label = "cfe";
+			reg = <0x000000 0x010000>;
+			read-only;
+		};
+
+		partition@10000 {
+			label = "firmware";
+			reg = <0x010000 0x770000>;
+			compatible = "brcm,bcm963xx-imagetag";
+		};
+
+		partition@780000 {
+			label = "adsl_phy";
+			reg = <0x780000 0x070000>;
+		};
+
+		partition@7f0000 {
+			label = "nvram";
+			reg = <0x7f0000 0x010000>;
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&usbh {
+	status = "okay";
+};
+
+&cfe {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_cfe_6a0: macaddr@6a0 {
+		reg = <0x6a0 0x6>;
+	};
+};

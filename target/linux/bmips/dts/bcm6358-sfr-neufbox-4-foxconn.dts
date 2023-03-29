@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include "bcm6358-sfr-neufbox-4.dtsi"
+
+/ {
+	compatible = "sfr,neufbox-4-foxconn", "brcm,bcm6358";
+	model = "SFR Neufbox 4 (Foxconn)";
+
+	aliases {
+		led-boot = &led_service_green;
+		led-failsafe = &led_service_red;
+		led-running = &led_service_green;
+		led-upgrade = &led_service_green;
+
+		led-wireless = &led_wireless_white;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led@2 {
+			label = "white:traffic";
+			gpios = <&gpio 2 GPIO_ACTIVE_LOW>;
+		};
+
+		led@4 {
+			label = "blue:service";
+			gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+		};
+
+		led_wireless_white: led@15 {
+			label = "white:wifi";
+			gpios = <&gpio 15 GPIO_ACTIVE_LOW>;
+		};
+
+		led_service_red: led@29 {
+			label = "red:service";
+			gpios = <&gpio 29 GPIO_ACTIVE_LOW>;
+		};
+
+		led_service_green: led@30 {
+			label = "green:service";
+			gpios = <&gpio 30 GPIO_ACTIVE_LOW>;
+		};
+	};
+};

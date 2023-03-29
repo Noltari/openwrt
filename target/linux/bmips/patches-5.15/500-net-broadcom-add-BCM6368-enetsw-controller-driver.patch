@@ -26,7 +26,7 @@ Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
 +config BCM6368_ENETSW
 +	tristate "Broadcom BCM6368 internal mac support"
 +	depends on BMIPS_GENERIC || COMPILE_TEST
-+	default y
++	default n
 +	help
 +	  This driver supports Ethernet controller integrated into Broadcom
 +	  BCM6368 family SoCs.
