@@ -1,0 +1,30 @@
+--- a/drivers/hwmon/Kconfig
++++ b/drivers/hwmon/Kconfig
+@@ -1165,6 +1165,17 @@ config SENSORS_MR75203
+ 	  This driver can also be built as a module. If so, the module
+ 	  will be called mr75203.
+ 
++config SENSORS_NB6_HWMON
++	tristate "SFR NeufBox 6 (NB6) Hardware Monitoring"
++	depends on I2C
++	depends on PWM
++	help
++	  If you say yes here you get support for SFR NeufBox 6 PWM LEDs,
++	  temperature and voltage sensors.
++
++	  This driver can also be built as a module. If so, the module
++	  will be called nb6-hwmon.
++
+ config SENSORS_ADCXX
+ 	tristate "National Semiconductor ADCxxxSxxx"
+ 	depends on SPI_MASTER
+--- a/drivers/hwmon/Makefile
++++ b/drivers/hwmon/Makefile
+@@ -148,6 +148,7 @@ obj-$(CONFIG_SENSORS_TPS23861)	+= tps238
+ obj-$(CONFIG_SENSORS_MLXREG_FAN) += mlxreg-fan.o
+ obj-$(CONFIG_SENSORS_MENF21BMC_HWMON) += menf21bmc_hwmon.o
+ obj-$(CONFIG_SENSORS_MR75203)	+= mr75203.o
++obj-$(CONFIG_SENSORS_NB6_HWMON)	+= nb6-hwmon.o
+ obj-$(CONFIG_SENSORS_NCT6683)	+= nct6683.o
+ obj-$(CONFIG_SENSORS_NCT6775)	+= nct6775.o
+ obj-$(CONFIG_SENSORS_NCT7802)	+= nct7802.o

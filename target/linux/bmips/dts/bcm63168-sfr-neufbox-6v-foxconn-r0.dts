@@ -1,0 +1,355 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include "bcm63268.dtsi"
+
+/ {
+	model = "SFR Neufbox 6V (Foxconn)";
+	compatible = "sfr,neufbox-6v-foxconn-r0", "brcm,bcm63168", "brcm,bcm63268";
+
+	aliases {
+		led-boot = &led_service1_green;
+		led-failsafe = &led_service1_red;
+		led-running = &led_service1_green;
+		led-upgrade = &led_service1_green;
+	};
+
+	i2c {
+		compatible = "i2c-gpio";
+		sda-gpios = <&gpio 1 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&gpio 0 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pwm: nb6-hwmon@60 {
+			compatible = "sfr,nb6_hwmon";
+			reg = <0x60>;
+			#pwm-cells = <2>;
+		};
+	};
+
+	keys {
+		compatible = "gpio-keys-polled";
+		poll-interval = <20>;
+
+		service {
+			label = "service";
+			gpios = <&gpio 16 GPIO_ACTIVE_HIGH>;
+			linux,code = <BTN_0>;
+			debounce-interval = <60>;
+		};
+
+		wlan {
+			label = "wlan";
+			gpios = <&gpio 20 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WLAN>;
+			debounce-interval = <60>;
+		};
+
+		eco {
+			label = "eco";
+			gpios = <&gpio 22 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_1>;
+			debounce-interval = <60>;
+		};
+
+		wps {
+			label = "wps";
+			gpios = <&gpio 33 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_WPS_BUTTON>;
+			debounce-interval = <60>;
+		};
+
+		reset {
+			label = "reset";
+			gpios = <&gpio 34 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_RESTART>;
+			debounce-interval = <60>;
+		};
+	};
+
+	pwm-leds {
+		compatible = "pwm-leds";
+
+		led_service1_red: service1_red {
+			label = "neufbox-6v-foxconn-r0:red:service1";
+			pwms = <&pwm 0 31>;
+			max-brightness = <31>;
+		};
+
+		service2_red {
+			label = "neufbox-6v-foxconn-r0:red:service2";
+			pwms = <&pwm 1 31>;
+			max-brightness = <31>;
+		};
+
+		service3_red {
+			label = "neufbox-6v-foxconn-r0:red:service3";
+			pwms = <&pwm 2 31>;
+			max-brightness = <31>;
+		};
+
+		led_service1_green: service1_green {
+			label = "neufbox-6v-foxconn-r0:green:service1";
+			pwms = <&pwm 3 31>;
+			max-brightness = <31>;
+		};
+
+		service2_green {
+			label = "neufbox-6v-foxconn-r0:green:service2";
+			pwms = <&pwm 4 31>;
+			max-brightness = <31>;
+		};
+
+		service3_green {
+			label = "neufbox-6v-foxconn-r0:green:service3";
+			pwms = <&pwm 5 31>;
+			max-brightness = <31>;
+		};
+
+		wan_white {
+			label = "neufbox-6v-foxconn-r0:white:wan";
+			pwms = <&pwm 6 31>;
+			max-brightness = <31>;
+		};
+
+		voip_white {
+			label = "neufbox-6v-foxconn-r0:white:voip";
+			pwms = <&pwm 7 31>;
+			max-brightness = <31>;
+		};
+
+		wlan_white {
+			label = "neufbox-6v-foxconn-r0:white:wlan";
+			pwms = <&pwm 8 31>;
+			max-brightness = <31>;
+		};
+	};
+
+/*
+	switch {
+		compatible = "realtek,rtl8366rb";
+		//gpio-sda = <&gpio 8 GPIO_ACTIVE_LOW>;
+		//gpio-sck = <&gpio 9 GPIO_ACTIVE_LOW>;
+		//realtek,extif0 = <1 5 1 1 1 1 1 1 2>;
+		mdc-gpios = <&gpio 8 GPIO_ACTIVE_HIGH>;
+		mdio-gpios = <&gpio 9 GPIO_ACTIVE_HIGH>;
+
+		mdio {
+			compatible = "realtek,smi-mdio", "dsa-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ephy0: phy@0 {
+				reg = <0>;
+			};
+
+			ephy1: phy@1 {
+				reg = <1>;
+			};
+
+			ephy2: phy@2 {
+				reg = <2>;
+			};
+
+			ephy3: phy@3 {
+				reg = <3>;
+			};
+
+			ephy4: phy@4 {
+				reg = <4>;
+			};
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			port@0 {
+				reg = <0>;
+				label = "lan0";
+
+				phy-handle = <&ephy0>;
+			};
+
+			port@1 {
+				reg = <1>;
+				label = "lan1";
+
+				phy-handle = <&ephy1>;
+			};
+
+			port@2 {
+				reg = <2>;
+				label = "lan2";
+
+				phy-handle = <&ephy2>;
+			};
+
+			port@3 {
+				reg = <3>;
+				label = "lan3";
+
+				phy-handle = <&ephy3>;
+			};
+
+			port@4 {
+				reg = <4>;
+				label = "wan";
+
+				phy-handle = <&ephy4>;
+			};
+
+			port@5 {
+				reg = <5>;
+				label = "cpu";
+
+				ethernet = <&switch0port4>;
+				phy-mode = "rgmii";
+
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
+		};
+	};
+*/
+};
+
+&ehci {
+	status = "okay";
+};
+
+&ethernet {
+	status = "okay";
+
+	nvmem-cells = <&macaddr_cferom_6a0>;
+	nvmem-cell-names = "mac-address";
+};
+
+/*
+&mdio_ext {
+	switch@1e {
+		compatible = "realtek,rtl8366rb";
+		reg = <30>;
+
+		dsa,member = <1 0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@1 {
+				reg = <1>;
+				label = "lan3";
+			};
+
+			port@2 {
+				reg = <2>;
+				label = "lan2";
+			};
+
+			port@3 {
+				reg = <3>;
+				label = "lan1";
+			};
+
+			port@4 {
+				reg = <4>;
+				label = "lan4";
+			};
+
+			port@8 {
+				reg = <8>;
+
+				phy-mode = "rgmii";
+				ethernet = <&switch0port4>;
+
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
+		};
+	};
+};
+*/
+
+&nflash {
+	status = "okay";
+
+	nandcs@0 {
+		compatible = "brcm,nandcs";
+		reg = <0>;
+		nand-ecc-step-size = <512>;
+		nand-ecc-strength = <15>;
+		nand-on-flash-bbt;
+		brcm,nand-oob-sector-size = <64>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			cferom: partition@0 {
+				label = "nand";
+				reg = <0x0000000 0x4000000>;
+				read-only;
+			};
+		};
+	};
+};
+
+&ohci {
+	status = "okay";
+};
+
+&switch0 {
+	ports {
+		switch0port4: port@4 {
+			reg = <4>;
+			label = "extsw";
+
+			phy-mode = "rgmii-id";
+
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
+
+		switch0port5: port@5 {
+			reg = <5>;
+			label = "extsw2";
+
+			phy-mode = "rgmii-id";
+
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&usbh {
+	status = "okay";
+};
+
+&cferom {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_cferom_6a0: macaddr@6a0 {
+		reg = <0x6a0 0x6>;
+	};
+};

@@ -154,3 +154,19 @@ define Device/sercomm_h500-s-vfes
   SERCOMM_VERSION := 1001
 endef
 TARGET_DEVICES += sercomm_h500-s-vfes
+
+define Device/sfr_neufbox-6v-foxconn-r0
+  $(Device/bcm63xx-nand)
+  DEVICE_VENDOR := SFR
+  DEVICE_MODEL := Neufbox 6V
+  CHIP_ID := 63268
+  SOC := bcm63168
+  CFE_RAM_FILE := sfr,neufbox-6v-foxconn-r0/cferam.000
+  CFE_RAM_JFFS2_NAME := cferam.000
+  BLOCKSIZE := 16k
+  PAGESIZE := 512
+  DEVICE_PACKAGES += $(USB2_PACKAGES)
+  CFE_WFI_FLASH_TYPE := 2
+  CFE_WFI_VERSION := 0x5731
+endef
+TARGET_DEVICES += sfr_neufbox-6v-foxconn-r0
