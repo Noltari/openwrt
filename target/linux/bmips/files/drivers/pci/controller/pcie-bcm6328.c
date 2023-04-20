@@ -32,8 +32,14 @@
 #define SERDES_PCIE_EXD_EN		BIT(15)
 #define SERDES_PCIE_EN			BIT(0)
 
-#define PCIE_BUS_BRIDGE			0
-#define PCIE_BUS_DEVICE			1
+#define PCIE_BUS_BRIDGE			1
+#define PCIE_BUS_DEVICE			2
+
+#define WLAN_OCP_DEV_NUM		1
+#define WLAN_OCP_DEV_SLOT		0
+#define WLAN_OCP_PCI_HDR_DW_LEN		64
+#define WLAN_OCP_PCI_ID			0x435f14e4
+#define WLAN_OCP_RES_SIZE		0x2000
 
 #define PCIE_CONFIG2_REG		0x408
 #define CONFIG2_BAR1_SIZE_EN		1
@@ -80,6 +86,31 @@
 
 #define PCIE_DEVICE_OFFSET		0x8000
 
+#define BCM_6362_WLAN_CHIPCOMMON_BASE	(0xb0004000)
+
+#define BCM6362_PCIE_MEM2_BASE		0xa0000000
+#define BCM6362_PCIE_MEM2_SIZE		(0x01000000-0x100000)
+
+#define BCM6362_PCI_MEM_BASE		(BCM6362_PCIE_MEM2_BASE + \
+					 BCM6362_PCIE_MEM2_SIZE)
+#define BCM6362_PCI_MEM_SIZE		0x00100000
+
+#define BCM6362_CB_MEM_BASE		(BCM6362_PCI_MEM_BASE + \
+					 BCM6362_PCI_MEM_SIZE)
+#define BCM6362_CB_MEM_SIZE		0x01000000
+
+#define BCM6362_PCI_IO_BASE		(BCM6362_CB_MEM_BASE + \
+					 BCM6362_CB_MEM_SIZE)
+#define BCM6362_PCI_IO_SIZE		0x00010000
+
+#define BCM6362_PCI_IO_BASE_PA		BCM6362_PCI_IO_BASE
+#define BCM6362_PCI_IO_END_PA		(BCM6362_PCI_IO_BASE_PA + \
+					 BCM6362_PCI_IO_SIZE - 1)
+
+#define BCM6362_PCI_MEM_BASE_PA		BCM6362_PCI_MEM_BASE
+#define BCM6362_PCI_MEM_END_PA		(BCM6362_PCI_MEM_BASE_PA + \
+					 BCM6362_PCI_MEM_SIZE - 1)
+
 struct bcm6328_pcie {
 	void __iomem *base;
 	int irq;
@@ -97,6 +128,26 @@ struct bcm6328_pcie {
 static struct bcm6328_pcie bcm6328_pcie;
 
 extern int bmips_pci_irq;
+extern int bmips_wlan_irq;
+
+static void bcm6362_pci_fixup(struct pci_dev *dev)
+{
+	switch (PCI_SLOT(dev->devfn)) {
+	case WLAN_OCP_DEV_SLOT:
+		if (((dev->device << 16) | dev->vendor) == WLAN_OCP_PCI_ID) {
+			pr_info("resource[0].start=%08x dev->resource[0].end=%08x\n", dev->resource[0].start, dev->resource[0].end);
+			pr_info("resource[1].start=%08x dev->resource[1].end=%08x\n", dev->resource[1].start, dev->resource[1].end);
+			pr_info("resource[2].start=%08x dev->resource[2].end=%08x\n", dev->resource[2].start, dev->resource[2].end);
+			pr_info("resource[3].start=%08x dev->resource[3].end=%08x\n", dev->resource[3].start, dev->resource[3].end);
+
+			pr_info("bcm6362_pci_fixup: devfn=%x dev=%x vendor=%x fixup=%x\n", dev->devfn, dev->device, dev->vendor, (dev->device << 16) | dev->vendor);
+			dev->resource[0].start = BCM_6362_WLAN_CHIPCOMMON_BASE;
+			dev->resource[0].end = BCM_6362_WLAN_CHIPCOMMON_BASE + WLAN_OCP_RES_SIZE - 1;
+		}
+		break;
+	}
+}
+DECLARE_PCI_FIXUP_FINAL(PCI_ANY_ID, PCI_ANY_ID, bcm6362_pci_fixup);
 
 /*
  * swizzle 32bits data to return only the needed part
@@ -142,6 +193,94 @@ static int preprocess_write(u32 orig_data, u32 val, int where,
 	return ret;
 }
 
+u32 bcm6362_wlan_soft_config_space[WLAN_OCP_DEV_NUM][WLAN_OCP_PCI_HDR_DW_LEN] = {
+	{
+		WLAN_OCP_PCI_ID, 0x00100006, 0x02800000, 0x00000010,
+		BCM_6362_WLAN_CHIPCOMMON_BASE, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x051314e4,
+		0x00000000, 0x00000040, 0x00000000, 0x0000010f,
+		0xce035801, 0x00004008, 0x0080d005, 0x00000000,
+		0x00000000, 0x00000000, 0x00784809, 0x00000010,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x18001000, 0x00000000, 0xffffffff, 0x00000003,
+		0x00000000, 0x00000100, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00010000, 0x18101000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00010010, 0x00288fa0, 0x00190100, 0x00176c11,
+		0x30110040, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	},
+};
+
+static int bcm6362_wlan_pci_read(struct pci_bus *bus, unsigned int devfn,
+				 int where, int size, u32 *val)
+{
+	u32 data;
+
+#if 0
+	pr_info("bcm6362_wlan_pci_read: devfn=%x where=%x size=%x\n", devfn, where, size);
+#endif
+
+	if (PCI_SLOT(devfn) != WLAN_OCP_DEV_SLOT)
+		return PCIBIOS_SUCCESSFUL;
+
+	if (where >= 256)
+		data = 0xffffffff;
+	else
+		data = bcm6362_wlan_soft_config_space[PCI_SLOT(devfn) - WLAN_OCP_DEV_SLOT][where / 4];
+
+	*val = postprocess_read(data, where, size);
+
+	switch (size) {
+	case 4:
+		/* Special case for reading PCI device range */
+		if ((where >= PCI_BASE_ADDRESS_0) && (where <= PCI_BASE_ADDRESS_5)) {
+			if (data == 0xffffffff) {
+				if (where == PCI_BASE_ADDRESS_0)
+					*val = 0xFFFF0000;
+				else
+					*val = 0;
+			}
+		}
+		break;
+	}
+
+#if 0
+	pr_info("bcm6362_wlan_pci_read: devfn=%x where=%x size=%x val=%x\n", devfn, where, size, *val);
+#endif
+
+	return PCIBIOS_SUCCESSFUL;
+}
+
+static int bcm6362_wlan_pci_write(struct pci_bus *bus, unsigned int devfn,
+				  int where, int size, u32 val)
+{
+	u32 data;
+
+#if 0
+	pr_info("bcm6362_wlan_pci_write: devfn=%x where=%x size=%x val=%x\n", devfn, where, size, val);
+#endif
+
+	if (PCI_SLOT(devfn) != WLAN_OCP_DEV_SLOT)
+		return PCIBIOS_SUCCESSFUL;
+
+	if (where >= 256)
+		return PCIBIOS_BAD_REGISTER_NUMBER;
+
+	data = bcm6362_wlan_soft_config_space[PCI_SLOT(devfn) - WLAN_OCP_DEV_SLOT][where / 4];
+	data = preprocess_write(data, val, where, size);
+	bcm6362_wlan_soft_config_space[PCI_SLOT(devfn) - WLAN_OCP_DEV_SLOT][where / 4] = data;
+
+	return PCIBIOS_SUCCESSFUL;
+}
+
+struct pci_ops bcm6362_wlan_pci_ops = {
+	.read = bcm6362_wlan_pci_read,
+	.write = bcm6362_wlan_pci_write
+};
+
 static int bcm6328_pcie_can_access(struct pci_bus *bus, int devfn)
 {
 	struct bcm6328_pcie *priv = &bcm6328_pcie;
@@ -166,6 +305,11 @@ static int bcm6328_pcie_read(struct pci_bus *bus, unsigned int devfn,
 	u32 data;
 	u32 reg = where & ~3;
 
+	if ((size == 2) && (where & 1))
+		return PCIBIOS_BAD_REGISTER_NUMBER;
+	else if ((size == 4) && (where & 3))
+		return PCIBIOS_BAD_REGISTER_NUMBER;
+
 	if (!bcm6328_pcie_can_access(bus, devfn))
 		return PCIBIOS_DEVICE_NOT_FOUND;
 
@@ -184,6 +328,11 @@ static int bcm6328_pcie_write(struct pci_bus *bus, unsigned int devfn,
 	struct bcm6328_pcie *priv = &bcm6328_pcie;
 	u32 data;
 	u32 reg = where & ~3;
+
+	if ((size == 2) && (where & 1))
+		return PCIBIOS_BAD_REGISTER_NUMBER;
+	else if ((size == 4) && (where & 3))
+		return PCIBIOS_BAD_REGISTER_NUMBER;
 
 	if (!bcm6328_pcie_can_access(bus, devfn))
 		return PCIBIOS_DEVICE_NOT_FOUND;
@@ -211,6 +360,26 @@ static struct pci_controller bcm6328_pcie_controller = {
 	.pci_ops = &bcm6328_pcie_ops,
 	.io_resource = &bcm6328_pcie_io_resource,
 	.mem_resource = &bcm6328_pcie_mem_resource,
+};
+
+static struct resource bcm6362_wlan_pci_io_resource = {
+	.name = "bcm6362 WLAN PCI IO space",
+	.start = BCM6362_PCI_IO_BASE_PA,
+	.end = BCM6362_PCI_IO_END_PA,
+	.flags = IORESOURCE_IO
+};
+
+static struct resource bcm6362_wlan_pci_mem_resource = {
+	.name = "bcm6362 WLAN PCI memory space",
+	.start = BCM6362_PCI_MEM_BASE_PA,
+	.end = BCM6362_PCI_MEM_END_PA,
+	.flags = IORESOURCE_MEM
+};
+
+struct pci_controller bcm6362_wlan_pci_controller = {
+	.pci_ops = &bcm6362_wlan_pci_ops,
+	.io_resource = &bcm6362_wlan_pci_io_resource,
+	.mem_resource = &bcm6362_wlan_pci_mem_resource,
 };
 
 static void bcm6328_pcie_reset(struct bcm6328_pcie *priv)
@@ -385,6 +554,7 @@ static int bcm6328_pcie_probe(struct platform_device *pdev)
 	pci_add_resource(&resources, &bcm6328_pcie_busn_resource);
 
 	bcm6328_pcie_reset(priv);
+	register_pci_controller(&bcm6362_wlan_pci_controller);
 	bcm6328_pcie_setup(priv);
 
 	register_pci_controller(&bcm6328_pcie_controller);
@@ -406,6 +576,218 @@ static struct platform_driver bcm6328_pcie_driver = {
 	},
 };
 module_platform_driver(bcm6328_pcie_driver);
+
+#if 0
+0x00    uint32 CcIdA;                               /* CC desc A */
+0x04    uint32 CcIdB;                               /* CC desc B */
+0x08    uint32 CcAddr;                              /* CC base addr */
+0x0c    uint32 MacIdA;                              /* MAC desc A */
+0x10    uint32 MacIdB;                              /* MAC desc B */
+0x14    uint32 MacAddr;                             /* MAC base addr */
+0x18    uint32 ShimIdA;                             /* SHIM desc A */
+0x1c    uint32 ShimIdB;                             /* SHIM desc B */
+0x20    uint32 ShimAddr;                            /* SHIM addr */
+0x24    uint32 ShimEot;                             /* EOT */
+0x28    uint32 CcControl;                           /* CC control */                                                
+0x2c    uint32 CcStatus;                            /* CC status */                                                
+0x30    uint32 MacControl;                          /* MAC control */                                                
+0x34    uint32 MacStatus;                           /* MAC status */    
+0x38    uint32 ShimMisc;                            /* SHIM control registers */
+0x3c    uint32 ShimStatus;                          /* SHIM status */
+#endif
+
+#if 0
+0x00    uint32 ShimMisc;                            /* SHIM control registers */
+0x04    uint32 ShimStatus;                          /* SHIM status */       
+0x08    uint32 CcControl;                           /* CC control */
+0x0c    uint32 CcStatus;                            /* CC status */
+0x10    uint32 MacControl;                          /* MAC control */
+0x14    uint32 MacStatus;                           /* MAC status */
+0x18    uint32 CcIdA;                               /* CC desc A */
+0x1c    uint32 CcIdB;                               /* CC desc B */
+0x20    uint32 CcAddr;                              /* CC base addr */
+0x24    uint32 MacIdA;                              /* MAC desc A */
+0x28    uint32 MacIdB;                              /* MAC desc B */
+0x2c    uint32 MacAddr;                             /* MAC base addr */
+0x30    uint32 ShimIdA;                             /* SHIM desc A */
+0x34    uint32 ShimIdB;                             /* SHIM desc B */
+0x38    uint32 ShimAddr;                            /* SHIM addr */
+0x3c    uint32 ShimEot;                             /* EOT */     
+#endif
+
+#define CHIP_REV_ADDR			((void __iomem *) 0xb0000000)
+#define  REV_REVID_SHIFT		0
+#define  REV_REVID_MASK			(0xff << REV_REVID_SHIFT)
+
+#define WLAN_SHIM_MISC			0x00
+#define WLAN_SHIM_MISC_A0		0x38
+#define WLAN_SHIM_FORCE_CLOCKS_ON	BIT(2)
+#define WLAN_SHIM_MACRO_DISABLE		BIT(1)
+#define WLAN_SHIM_MACRO_SOFT_RESET	BIT(0)
+
+#define WLAN_SHIM_STATUS		0x04
+#define WLAN_SHIM_STATUS_A0		0x3c
+
+#define WLAN_CC_CONTROL			0x08
+#define WLAN_CC_CONTROL_A0		0x28
+
+#define WLAN_CC_STATUS			0x0c
+#define WLAN_CC_STATUS_A0		0x2c
+
+#define WLAN_MAC_CONTROL		0x10
+#define WLAN_MAC_CONTROL_A0		0x30
+#define SICF_FGC			BIT(1)
+#define SICF_CLOCK_EN			BIT(0)
+
+#define WLAN_MAC_STATUS			0x14
+#define WLAN_MAC_STATUS_A0		0x34
+
+#define WLAN_CC_ID_A			0x18
+#define WLAN_CC_ID_A_A0			0x00
+
+#define WLAN_CC_ID_B			0x1c
+#define WLAN_CC_ID_B_A0			0x04
+
+#define WLAN_CC_ADDR			0x20
+#define WLAN_CC_ADDR_A0			0x08
+
+#define WLAN_MAC_ID_A			0x24
+#define WLAN_MAC_ID_A_A0		0x0c
+
+#define WLAN_MAC_ID_B			0x28
+#define WLAN_MAC_ID_B_A0		0x10
+
+#define WLAN_MAC_ADDR			0x2c
+#define WLAN_MAC_ADDR_A0		0x14
+
+#define WLAN_SHIM_ID_A			0x30
+#define WLAN_SHIM_ID_A_A0		0x18
+
+#define WLAN_SHIM_ID_B			0x34
+#define WLAN_SHIM_ID_B_A0		0x1c
+
+#define WLAN_SHIM_ADDR			0x38
+#define WLAN_SHIM_ADDR_A0		0x20
+
+#define WLAN_SHIM_EOT			0x3c
+#define WLAN_SHIM_EOT_A0		0x24
+
+#define bcm_wlan_shim_writel(v, o) __raw_writel((v), (wlan_shim) + (o))
+
+static int bcm6362_wlan_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	void __iomem *wlan_shim;
+	struct reset_control *reset_shim;
+	struct reset_control *reset_ubus;
+	struct resource *res;
+	struct clk *clk_ocp;
+	u32 chip_rev;
+	int ret;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	wlan_shim = devm_ioremap_resource(dev, res);
+	if (IS_ERR(wlan_shim))
+		return PTR_ERR(wlan_shim);
+
+	bmips_wlan_irq = platform_get_irq(pdev, 0);
+	if (!bmips_wlan_irq)
+		return -ENODEV;
+
+	reset_shim = devm_reset_control_get(dev, "wlan-shim");
+	if (IS_ERR(reset_shim))
+		return PTR_ERR(reset_shim);
+
+	reset_ubus = devm_reset_control_get(dev, "wlan-ubus");
+	if (IS_ERR(reset_ubus))
+		return PTR_ERR(reset_ubus);
+
+	clk_ocp = devm_clk_get(dev, "wlan-ocp");
+	if (IS_ERR(clk_ocp))
+		return PTR_ERR(clk_ocp);
+
+	ret = clk_prepare_enable(clk_ocp);
+	if (ret) {
+		dev_err(dev, "could not enable clock\n");
+		return ret;
+	}
+
+	chip_rev = __raw_readl(CHIP_REV_ADDR);
+	dev_info(dev, "bcm6362-wlan: detected chip 0x%x\n", chip_rev);
+
+	mdelay(10);
+	reset_control_assert(reset_shim);
+	reset_control_assert(reset_ubus);
+	mdelay(1);
+	reset_control_deassert(reset_shim);
+	reset_control_deassert(reset_ubus);
+	mdelay(1);
+
+	if ((chip_rev & REV_REVID_MASK) == 0xa0)
+	{
+		bcm_wlan_shim_writel((WLAN_SHIM_FORCE_CLOCKS_ON |
+				WLAN_SHIM_MACRO_SOFT_RESET),
+				WLAN_SHIM_MISC_A0);
+		mdelay(1);
+		bcm_wlan_shim_writel((SICF_FGC | SICF_CLOCK_EN),
+				WLAN_MAC_CONTROL_A0);
+		wmb();
+		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
+				WLAN_SHIM_MISC_A0);
+		wmb();
+		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
+				WLAN_SHIM_MISC_A0);
+		wmb();
+		bcm_wlan_shim_writel(0, WLAN_SHIM_MISC_A0);
+		wmb();
+		bcm_wlan_shim_writel(SICF_CLOCK_EN, WLAN_MAC_CONTROL_A0);
+	} else {
+		bcm_wlan_shim_writel((WLAN_SHIM_FORCE_CLOCKS_ON |
+				WLAN_SHIM_MACRO_SOFT_RESET),
+				WLAN_SHIM_MISC);
+		mdelay(1);
+		bcm_wlan_shim_writel((SICF_FGC | SICF_CLOCK_EN),
+				WLAN_MAC_CONTROL);
+		wmb();
+		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
+				WLAN_SHIM_MISC);
+		wmb();
+		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
+				WLAN_SHIM_MISC);
+		wmb();
+		bcm_wlan_shim_writel(0, WLAN_SHIM_MISC);
+		wmb();
+		bcm_wlan_shim_writel(SICF_CLOCK_EN, WLAN_MAC_CONTROL);
+	}
+
+	dev_info(dev, "bcm6362-wlan: setup done!\n");
+
+	return 0;
+}
+
+static const struct of_device_id bcm6362_wlan_of_match[] = {
+	{ .compatible = "brcm,bcm6362-wlan", },
+	{ .compatible = "brcm,bcm63268-wlan", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, bcm6362_wlan_of_match);
+
+static struct platform_driver bcm6362_wlan_driver = {
+	.probe = bcm6362_wlan_probe,
+	.driver	= {
+		.name = "bcm6362-wlan",
+		.of_match_table = bcm6362_wlan_of_match,
+	},
+};
+
+int __init bcm6362_wlan_init(void)
+{
+	int ret = platform_driver_register(&bcm6362_wlan_driver);
+	if (ret)
+		pr_err("bcm6362-wlan: error registering platform driver!\n");
+	return ret;
+}
+rootfs_initcall(bcm6362_wlan_init);
 
 MODULE_AUTHOR("Álvaro Fernández Rojas <noltari@gmail.com>");
 MODULE_DESCRIPTION("BCM6328 PCIe Controller Driver");

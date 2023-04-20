@@ -17,6 +17,7 @@ define Device/huawei_hg253s-v2
   SUBPAGESIZE := 512
   VID_HDR_OFFSET := 2048
   DEVICE_PACKAGES += $(USB2_PACKAGES) \
+    $(B43_PACKAGES) broadcom-6362-sprom \
     kmod-leds-bcm6328 kmod-leds-gpio
   CFE_WFI_FLASH_TYPE := 3
 endef
@@ -34,7 +35,7 @@ define Device/netgear_dgnd3700-v2
   BLOCKSIZE := 16k
   PAGESIZE := 512
   DEVICE_PACKAGES += $(USB2_PACKAGES) \
-    $(B43_PACKAGES) \
+    $(B43_PACKAGES) broadcom-6362-sprom \
     kmod-leds-bcm6328 kmod-leds-gpio
   CFE_WFI_FLASH_TYPE := 2
   CFE_WFI_VERSION := 0x5731

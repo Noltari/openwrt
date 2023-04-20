@@ -286,6 +286,17 @@
 					function = "dsl_gpio9";
 					group = "dsl_gpio9";
 				};
+
+				pinctrl_wifi: wifi-pins {
+					function = "wifi";
+					pins = "gpio32", "gpio33", "gpio34",
+					       "gpio35", "gpio36", "gpio37",
+					       "gpio38", "gpio39", "gpio40",
+					       "gpio41", "gpio42", "gpio43",
+					       "gpio44", "gpio45", "gpio46",
+					       "gpio47", "gpio48", "gpio49",
+					       "gpio50", "gpio51";
+				};
 			};
 		};
 
@@ -456,6 +467,33 @@
 			power-domains = <&periph_pwr BCM63268_POWER_DOMAIN_IPSEC>;
 		};
 
+		wlan: wlan@10007000 {
+			compatible = "brcm,bcm63268-wlan";
+			reg = <0x10007000 0x40>;
+
+			/* #define WLAN_CHIPC_BASE 0xb0004000 */
+			/* #define WLAN_MAC_BASE   0xb0005000 */
+			/* #define WLAN_SHIM_BASE  0xb0007000 */
+
+			interrupt-parent = <&periph_intc>;
+			interrupts = <BCM63268_IRQ_WLAN>;
+
+			clocks = <&periph_clk BCM63268_CLK_WLAN_OCP>;
+			clock-names = "wlan-ocp";
+
+			resets = <&periph_rst BCM63268_RST_WLAN_SHIM>,
+				 <&periph_rst BCM63268_RST_WLAN_UBUS>;
+			reset-names = "wlan-shim",
+				      "wlan-ubus";
+
+			power-domains = <&periph_pwr BCM63268_POWER_DOMAIN_WLAN_PADS>;
+
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_wifi>;
+
+			status = "disabled";
+		};
+
 		ethernet: ethernet@1000d800 {
 			compatible = "brcm,bcm63268-enetsw";
 			reg = <0x1000d800 0x80>,
@@ -499,7 +537,8 @@
 
 			device_type = "pci";
 			bus-range = <0x00 0x01>;
-			ranges = <0x2000000 0 0x11000000 0x11000000 0 0xf00000>;
+			ranges = <0x2000000 0 0x11000000 0x11000000 0 0xf00000>,
+				 <0x1000000 0 0x13000000 0x13000000 0 0x010000>;
 			linux,pci-probe-only = <1>;
 
 			interrupt-parent = <&periph_intc>;

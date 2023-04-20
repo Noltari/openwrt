@@ -1,0 +1,12 @@
+--- a/drivers/bcma/scan.c
++++ b/drivers/bcma/scan.c
+@@ -314,6 +314,9 @@ static int bcma_get_next_core(struct bcm
+ 		case BCMA_CORE_NS_CHIPCOMMON_B:
+ 		case BCMA_CORE_PMU:
+ 		case BCMA_CORE_GCI:
++		case BCMA_CORE_80211:
++		case BCMA_CORE_CHIPCOMMON:
++		case BCMA_CORE_SHIM:
+ 		/* Not used yet: case BCMA_CORE_OOB_ROUTER: */
+ 			break;
+ 		default:

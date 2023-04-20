@@ -1,0 +1,127 @@
+--- a/drivers/bcma/host_pci.c
++++ b/drivers/bcma/host_pci.c
+@@ -20,7 +20,7 @@ static void bcma_host_pci_switch_core(st
+ 			       core->addr);
+ 	pci_write_config_dword(core->bus->host_pci, win2, core->wrap);
+ 	core->bus->mapped_core = core;
+-	bcma_debug(core->bus, "Switched to core: 0x%X\n", core->id.id);
++	bcma_info(core->bus, "Switched to core: 0x%X\n", core->id.id);
+ }
+ 
+ /* Provides access to the requested core. Returns base offset that has to be
+@@ -42,40 +42,45 @@ static u16 bcma_host_pci_provide_access_
+ static u8 bcma_host_pci_read8(struct bcma_device *core, u16 offset)
+ {
+ 	offset += bcma_host_pci_provide_access_to_core(core);
+-	return ioread8(core->bus->mmio + offset);
++	//pr_info("bcma_host_pci_read8:core->bus->mmio=%px offset=%x\n", core->bus->mmio, offset);
++	return __raw_readb(core->bus->mmio + offset);
+ }
+ 
+ static u16 bcma_host_pci_read16(struct bcma_device *core, u16 offset)
+ {
++	u16 val;
+ 	offset += bcma_host_pci_provide_access_to_core(core);
+-	return ioread16(core->bus->mmio + offset);
++	val = __raw_readw(core->bus->mmio + offset);
++	//pr_info("bcma_host_pci_read16:core->bus->mmio=%px offset=%x val=%x\n", core->bus->mmio, offset, val);
++	return val;
+ }
+ 
+ static u32 bcma_host_pci_read32(struct bcma_device *core, u16 offset)
+ {
+ 	offset += bcma_host_pci_provide_access_to_core(core);
+-	return ioread32(core->bus->mmio + offset);
++	//pr_info("bcma_host_pci_read32:core->bus->mmio=%px offset=%x\n", core->bus->mmio, offset);
++	return __raw_readl(core->bus->mmio + offset);
+ }
+ 
+ static void bcma_host_pci_write8(struct bcma_device *core, u16 offset,
+ 				 u8 value)
+ {
+ 	offset += bcma_host_pci_provide_access_to_core(core);
+-	iowrite8(value, core->bus->mmio + offset);
++	__raw_writeb(value, core->bus->mmio + offset);
+ }
+ 
+ static void bcma_host_pci_write16(struct bcma_device *core, u16 offset,
+ 				 u16 value)
+ {
+ 	offset += bcma_host_pci_provide_access_to_core(core);
+-	iowrite16(value, core->bus->mmio + offset);
++	__raw_writew(value, core->bus->mmio + offset);
+ }
+ 
+ static void bcma_host_pci_write32(struct bcma_device *core, u16 offset,
+ 				 u32 value)
+ {
+ 	offset += bcma_host_pci_provide_access_to_core(core);
+-	iowrite32(value, core->bus->mmio + offset);
++	__raw_writel(value, core->bus->mmio + offset);
+ }
+ 
+ #ifdef CONFIG_BCMA_BLOCKIO
+@@ -129,9 +134,12 @@ static void bcma_host_pci_block_write(st
+ 
+ static u32 bcma_host_pci_aread32(struct bcma_device *core, u16 offset)
+ {
++	u32 val;
+ 	if (core->bus->mapped_core != core)
+ 		bcma_host_pci_switch_core(core);
+-	return ioread32(core->bus->mmio + (1 * BCMA_CORE_SIZE) + offset);
++	val = ioread32(core->bus->mmio + (1 * BCMA_CORE_SIZE) + offset);
++	//pr_info("bcma_host_pci_aread32: core=%x offset=%04x addr=%px val=%x\n", core->id.id, offset, core->bus->mmio + (1 * BCMA_CORE_SIZE) + offset, val);
++	return val;
+ }
+ 
+ static void bcma_host_pci_awrite32(struct bcma_device *core, u16 offset,
+@@ -139,6 +147,7 @@ static void bcma_host_pci_awrite32(struc
+ {
+ 	if (core->bus->mapped_core != core)
+ 		bcma_host_pci_switch_core(core);
++	//pr_info("bcma_host_pci_awrite32: core=%x offset=%04x addr=%px val=%x\n", core->id.id, offset, core->bus->mmio + (1 * BCMA_CORE_SIZE) + offset, value);
+ 	iowrite32(value, core->bus->mmio + (1 * BCMA_CORE_SIZE) + offset);
+ }
+ 
+@@ -203,6 +212,8 @@ static int bcma_host_pci_probe(struct pc
+ 	bus->mmio = pci_iomap(dev, 0, ~0UL);
+ 	if (!bus->mmio)
+ 		goto err_pci_release_regions;
++	pr_info("bus->mmio=%px\n", bus->mmio);
++	bus->mmio = (void __iomem *) 0xb0004000;
+ 
+ 	/* Host specific */
+ 	bus->host_pci = dev;
+--- a/drivers/bcma/scan.c
++++ b/drivers/bcma/scan.c
+@@ -143,7 +143,10 @@ static const char *bcma_device_name(cons
+ 
+ static u32 bcma_scan_read32(struct bcma_bus *bus, u16 offset)
+ {
+-	return readl(bus->mmio + offset);
++	u32 val;
++	val = __raw_readl(bus->mmio + offset);
++	dev_info(bus->dev, "bcma_scan_read32: mmio=%px off=%04x val=%08x", bus->mmio, offset, val);
++	return val;
+ }
+ 
+ static void bcma_scan_switch_core(struct bcma_bus *bus, u32 addr)
+@@ -155,7 +158,7 @@ static void bcma_scan_switch_core(struct
+ 
+ static u32 bcma_erom_get_ent(struct bcma_bus *bus, u32 __iomem **eromptr)
+ {
+-	u32 ent = readl(*eromptr);
++	u32 ent = __raw_readl(*eromptr);
+ 	(*eromptr)++;
+ 	return ent;
+ }
+@@ -473,7 +476,8 @@ int bcma_bus_scan(struct bcma_bus *bus)
+ 		if (!eromptr)
+ 			return -ENOMEM;
+ 	} else {
+-		eromptr = bus->mmio;
++		eromptr = ioremap(erombase, BCMA_CORE_SIZE);
++		pr_info("bcma_bus_scan: erombase=%08x eromptr=%px\n", erombase, eromptr);
+ 	}
+ 
+ 	eromend = eromptr + BCMA_CORE_SIZE / sizeof(u32);

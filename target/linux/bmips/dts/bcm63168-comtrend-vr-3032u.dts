@@ -35,6 +35,19 @@
 			debounce-interval = <60>;
 		};
 	};
+
+	bcm6362-sprom {
+		compatible = "brcm,bcma-sprom";
+
+		pci-bus = <0>;
+		pci-dev = <0>;
+
+		nvmem-cells = <&macaddr_cferom_6a0>;
+		nvmem-cell-names = "mac-address";
+		mac-address-increment = <1>;
+
+		brcm,sprom = "brcm/bcm6362-sprom.bin";
+	};
 };
 
 &ehci {
@@ -151,6 +164,10 @@
 	};
 };
 
+&pcie {
+	status = "okay";
+};
+
 &nflash {
 	status = "okay";
 
@@ -230,6 +247,10 @@
 };
 
 &usbh {
+	status = "okay";
+};
+
+&wlan {
 	status = "okay";
 };
 

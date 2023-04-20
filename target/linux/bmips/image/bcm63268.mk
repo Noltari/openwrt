@@ -13,6 +13,7 @@ define Device/comtrend_vr-3032u
   SUBPAGESIZE := 512
   VID_HDR_OFFSET := 2048
   DEVICE_PACKAGES += $(USB2_PACKAGES) \
+    $(B43_PACKAGES) broadcom-6362-sprom \
     kmod-leds-bcm6328
   CFE_WFI_FLASH_TYPE := 3
   CFE_WFI_VERSION := 0x5732
@@ -33,6 +34,7 @@ define Device/sercomm_h500-s-lowi
   SUBPAGESIZE := 512
   VID_HDR_OFFSET := 2048
   DEVICE_PACKAGES += $(USB2_PACKAGES) \
+    $(B43_PACKAGES) broadcom-6362-sprom \
     kmod-leds-bcm6328
   SERCOMM_FSVER := 1001
   SERCOMM_HWVER := 1434b31
@@ -54,6 +56,7 @@ define Device/sercomm_h500-s-vfes
   SUBPAGESIZE := 512
   VID_HDR_OFFSET := 2048
   DEVICE_PACKAGES += $(USB2_PACKAGES) \
+    $(B43_PACKAGES) broadcom-6362-sprom \
     kmod-leds-bcm6328
   SERCOMM_FSVER := 1001
   SERCOMM_HWVER := 142584b
@@ -73,9 +76,9 @@ define Device/sercomm_shg2500
   PAGESIZE := 2048
   SUBPAGESIZE := 512
   VID_HDR_OFFSET := 2048
-  DEVICE_PACKAGES += $(USB2_PACKAGES) \
-    broadcom-4360-sprom \
-    kmod-i2c-gpio kmod-leds-sercomm-msp430
+  DEVICE_PACKAGES += $(USB2_PACKAGES) kmod-i2c-gpio \
+    $(B43_PACKAGES) broadcom-6362-sprom broadcom-4360-sprom \
+    kmod-leds-sercomm-msp430
   SERCOMM_FSVER := 1001
   SERCOMM_HWVER := 1424e4a
   SERCOMM_SWVER := 3207

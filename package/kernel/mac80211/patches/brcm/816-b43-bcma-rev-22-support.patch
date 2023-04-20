@@ -1,0 +1,41 @@
+--- a/drivers/net/wireless/broadcom/b43/main.c
++++ b/drivers/net/wireless/broadcom/b43/main.c
+@@ -122,6 +122,7 @@ MODULE_PARM_DESC(allhwsupport, "Enable s
+ static const struct bcma_device_id b43_bcma_tbl[] = {
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x11, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x15, BCMA_ANY_CLASS),
++	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x16, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x17, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x18, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x1C, BCMA_ANY_CLASS),
+@@ -2347,7 +2348,7 @@ static int b43_try_request_fw(struct b43
+ 		if (phy->type == B43_PHYTYPE_LCN)
+ 			filename = "ucode24_lcn";
+ 		break;
+-	case 23:
++	case 22 ... 23:
+ 		if (phy->type == B43_PHYTYPE_N)
+ 			filename = "ucode16_mimo";
+ 		break;
+@@ -2411,8 +2412,8 @@ static int b43_try_request_fw(struct b43
+ 			filename = "n0initvals25";
+ 		else if (rev == 24)
+ 			filename = "n0initvals24";
+-		else if (rev == 23)
+-			filename = "n0initvals16"; /* What about n0initvals22? */
++		else if (rev >= 22 && rev <= 23)
++			filename = "n0initvals16";
+ 		else if (rev >= 16 && rev <= 18)
+ 			filename = "n0initvals16";
+ 		else if (rev >= 11 && rev <= 12)
+@@ -2471,8 +2472,8 @@ static int b43_try_request_fw(struct b43
+ 			filename = "n0bsinitvals25";
+ 		else if (rev == 24)
+ 			filename = "n0bsinitvals24";
+-		else if (rev == 23)
+-			filename = "n0bsinitvals16"; /* What about n0bsinitvals22? */
++		else if (rev >= 22 && rev <= 23)
++			filename = "n0bsinitvals16";
+ 		else if (rev >= 16 && rev <= 18)
+ 			filename = "n0bsinitvals16";
+ 		else if (rev >= 11 && rev <= 12)

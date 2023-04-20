@@ -1,0 +1,10 @@
+--- a/drivers/bcma/host_pci.c
++++ b/drivers/bcma/host_pci.c
+@@ -305,6 +305,7 @@ static const struct pci_device_id bcma_p
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 0x4727) },
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 43227) },	/* 0xa8db, BCM43217 (sic!) */
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 43228) },	/* 0xa8dc */
++	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 0x435f) }, /* BCM6362 */
+ 	{ 0, },
+ };
+ MODULE_DEVICE_TABLE(pci, bcma_pci_bridge_tbl);

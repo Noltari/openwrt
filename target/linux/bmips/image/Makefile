@@ -5,7 +5,7 @@ include $(INCLUDE_DIR)/image.mk
 
 KERNEL_LOADADDR := 0x80010000		# RAM start + 64K
 LOADER_ENTRY := 0x80a00000		# RAM start + 10M, for relocate
-LZMA_TEXT_START := 0x81800000		# RAM start + 24M
+LZMA_TEXT_START := 0x82000000		# RAM start + 24M
 
 DEVICE_VARS += CFE_BOARD_ID CFE_EXTRAS
 DEVICE_VARS += CFE_PART_FLAGS CFE_PART_ID
@@ -326,6 +326,7 @@ endef
 ### Package helpers ###
 ATH9K_PACKAGES := kmod-ath9k kmod-owl-loader wpad-basic-mbedtls
 B43_PACKAGES := kmod-b43 wpad-basic-mbedtls
+BRCMSMAC_PACKAGES := kmod-bcma kmod-brcmsmac wpad-basic-mbedtls
 USB1_PACKAGES := kmod-usb-ohci kmod-usb-ledtrig-usbport
 USB2_PACKAGES := $(USB1_PACKAGES) kmod-usb2
 
