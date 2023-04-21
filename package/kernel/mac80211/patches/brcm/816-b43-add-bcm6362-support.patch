@@ -1,0 +1,207 @@
+--- a/drivers/net/wireless/broadcom/b43/main.c
++++ b/drivers/net/wireless/broadcom/b43/main.c
+@@ -122,6 +122,7 @@ MODULE_PARM_DESC(allhwsupport, "Enable s
+ static const struct bcma_device_id b43_bcma_tbl[] = {
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x11, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x15, BCMA_ANY_CLASS),
++	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x16, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x17, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x18, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 0x1C, BCMA_ANY_CLASS),
+@@ -2347,7 +2348,7 @@ static int b43_try_request_fw(struct b43
+ 		if (phy->type == B43_PHYTYPE_LCN)
+ 			filename = "ucode24_lcn";
+ 		break;
+-	case 23:
++	case 22 ... 23:
+ 		if (phy->type == B43_PHYTYPE_N)
+ 			filename = "ucode16_mimo";
+ 		break;
+@@ -2411,7 +2412,7 @@ static int b43_try_request_fw(struct b43
+ 			filename = "n0initvals25";
+ 		else if (rev == 24)
+ 			filename = "n0initvals24";
+-		else if (rev == 23)
++		else if (rev == 22 || rev == 23)
+ 			filename = "n0initvals16"; /* What about n0initvals22? */
+ 		else if (rev >= 16 && rev <= 18)
+ 			filename = "n0initvals16";
+@@ -2471,7 +2472,7 @@ static int b43_try_request_fw(struct b43
+ 			filename = "n0bsinitvals25";
+ 		else if (rev == 24)
+ 			filename = "n0bsinitvals24";
+-		else if (rev == 23)
++		else if (rev == 22 || rev == 23)
+ 			filename = "n0bsinitvals16"; /* What about n0bsinitvals22? */
+ 		else if (rev >= 16 && rev <= 18)
+ 			filename = "n0bsinitvals16";
+@@ -3073,6 +3074,7 @@ void b43_mac_switch_freq(struct b43_wlde
+ 	} else if (chip_id == BCMA_CHIP_ID_BCM43131 ||
+ 	    chip_id == BCMA_CHIP_ID_BCM43217 ||
+ 	    chip_id == BCMA_CHIP_ID_BCM43222 ||
++	    chip_id == BCMA_CHIP_ID_BCM6362 ||
+ 	    chip_id == BCMA_CHIP_ID_BCM43224 ||
+ 	    chip_id == BCMA_CHIP_ID_BCM43225 ||
+ 	    chip_id == BCMA_CHIP_ID_BCM43227 ||
+@@ -4541,6 +4543,11 @@ static int b43_phy_versioning(struct b43
+ 			unsupported = 1;
+ 		break;
+ #endif
++	case 3:
++		phy_type = B43_PHYTYPE_N;
++		phy_rev = 6;
++		//analog_type = 8;
++		break;
+ 	default:
+ 		unsupported = 1;
+ 	}
+@@ -4584,6 +4591,8 @@ static int b43_phy_versioning(struct b43
+ 				tmp = 0x4205017F;
+ 			else
+ 				tmp = 0x5205017F;
++		} else if (dev->dev->chip_id == 0x6362) {
++			tmp = 0xb205617f;
+ 		} else {
+ 			b43_write16f(dev, B43_MMIO_RADIO_CONTROL,
+ 				     B43_RADIOCTL_ID);
+--- a/drivers/net/wireless/broadcom/b43/phy_n.c
++++ b/drivers/net/wireless/broadcom/b43/phy_n.c
+@@ -1134,7 +1134,8 @@ static void b43_radio_2056_setup(struct
+ 	B43_WARN_ON(dev->phy.rev < 3);
+ 
+ 	is_pkg_fab_smic =
+-		((dev->dev->chip_id == BCMA_CHIP_ID_BCM43224 ||
++		((dev->dev->chip_id == BCMA_CHIP_ID_BCM6362 ||
++		  dev->dev->chip_id == BCMA_CHIP_ID_BCM43224 ||
+ 		  dev->dev->chip_id == BCMA_CHIP_ID_BCM43225 ||
+ 		  dev->dev->chip_id == BCMA_CHIP_ID_BCM43421) &&
+ 		 dev->dev->chip_pkg == BCMA_PKG_ID_BCM43224_FAB_SMIC);
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmsmac/mac80211_if.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmsmac/mac80211_if.c
+@@ -95,6 +95,7 @@ MODULE_FIRMWARE("brcm/bcm43xx_hdr-0.fw")
+ /* recognized BCMA Core IDs */
+ static struct bcma_device_id brcms_coreid_table[] = {
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 17, BCMA_ANY_CLASS),
++	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 22, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 23, BCMA_ANY_CLASS),
+ 	BCMA_CORE(BCMA_MANUF_BCM, BCMA_CORE_80211, 24, BCMA_ANY_CLASS),
+ 	{},
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmsmac/main.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmsmac/main.c
+@@ -721,7 +721,7 @@ static void brcms_c_ucode_bsinit(struct
+ 	brcms_c_write_mhf(wlc_hw, wlc_hw->band->mhfs);
+ 
+ 	/* do band-specific ucode IHR, SHM, and SCR inits */
+-	if (D11REV_IS(wlc_hw->corerev, 17) || D11REV_IS(wlc_hw->corerev, 23)) {
++	if (D11REV_IS(wlc_hw->corerev, 17) || D11REV_IS(wlc_hw->corerev, 22) || D11REV_IS(wlc_hw->corerev, 23)) {
+ 		if (BRCMS_ISNPHY(wlc_hw->band))
+ 			brcms_c_write_inits(wlc_hw, ucode->d11n0bsinitvals16);
+ 		else
+@@ -2133,7 +2133,8 @@ void brcms_b_switch_macfreq(struct brcms
+ {
+ 	struct bcma_device *core = wlc_hw->d11core;
+ 
+-	if ((ai_get_chip_id(wlc_hw->sih) == BCMA_CHIP_ID_BCM43224) ||
++	if ((ai_get_chip_id(wlc_hw->sih) == BCMA_CHIP_ID_BCM6362) ||
++	    (ai_get_chip_id(wlc_hw->sih) == BCMA_CHIP_ID_BCM43224) ||
+ 	    (ai_get_chip_id(wlc_hw->sih) == BCMA_CHIP_ID_BCM43225)) {
+ 		if (spurmode == WL_SPURAVOID_ON2) {	/* 126Mhz */
+ 			bcma_write16(core, D11REGOFFS(tsf_clk_frac_l), 0x2082);
+@@ -2271,7 +2272,7 @@ static void brcms_ucode_download(struct
+ 	if (wlc_hw->ucode_loaded)
+ 		return;
+ 
+-	if (D11REV_IS(wlc_hw->corerev, 17) || D11REV_IS(wlc_hw->corerev, 23)) {
++	if (D11REV_IS(wlc_hw->corerev, 17) || D11REV_IS(wlc_hw->corerev, 22) || D11REV_IS(wlc_hw->corerev, 23)) {
+ 		if (BRCMS_ISNPHY(wlc_hw->band)) {
+ 			brcms_ucode_write(wlc_hw, ucode->bcm43xx_16_mimo,
+ 					  ucode->bcm43xx_16_mimosz);
+@@ -3200,7 +3201,7 @@ static void brcms_b_coreinit(struct brcm
+ 
+ 	bcma_aread32(core, BCMA_IOST);
+ 
+-	if (D11REV_IS(wlc_hw->corerev, 17) || D11REV_IS(wlc_hw->corerev, 23)) {
++	if (D11REV_IS(wlc_hw->corerev, 17) || D11REV_IS(wlc_hw->corerev, 22) || D11REV_IS(wlc_hw->corerev, 23)) {
+ 		if (BRCMS_ISNPHY(wlc_hw->band))
+ 			brcms_c_write_inits(wlc_hw, ucode->d11n0initvals16);
+ 		else
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmsmac/phy/phy_cmn.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmsmac/phy/phy_cmn.c
+@@ -827,7 +827,7 @@ wlc_phy_table_addr(struct brcms_phy *pi,
+ 	pi->tbl_data_hi = tblDataHi;
+ 	pi->tbl_data_lo = tblDataLo;
+ 
+-	if (pi->sh->chip == BCMA_CHIP_ID_BCM43224 &&
++	if ((pi->sh->chip == BCMA_CHIP_ID_BCM6362 || pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
+ 	    pi->sh->chiprev == 1) {
+ 		pi->tbl_addr = tblAddr;
+ 		pi->tbl_save_id = tbl_id;
+@@ -837,7 +837,7 @@ wlc_phy_table_addr(struct brcms_phy *pi,
+ 
+ void wlc_phy_table_data_write(struct brcms_phy *pi, uint width, u32 val)
+ {
+-	if ((pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
++	if ((pi->sh->chip == BCMA_CHIP_ID_BCM6362 || pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
+ 	    (pi->sh->chiprev == 1) &&
+ 	    (pi->tbl_save_id == NPHY_TBL_ID_ANTSWCTRLLUT)) {
+ 		read_phy_reg(pi, pi->tbl_data_lo);
+@@ -871,7 +871,7 @@ wlc_phy_write_table(struct brcms_phy *pi
+ 
+ 	for (idx = 0; idx < ptbl_info->tbl_len; idx++) {
+ 
+-		if ((pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
++		if ((pi->sh->chip == BCMA_CHIP_ID_BCM6362 || pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
+ 		    (pi->sh->chiprev == 1) &&
+ 		    (tbl_id == NPHY_TBL_ID_ANTSWCTRLLUT)) {
+ 			read_phy_reg(pi, tblDataLo);
+@@ -908,7 +908,7 @@ wlc_phy_read_table(struct brcms_phy *pi,
+ 
+ 	for (idx = 0; idx < ptbl_info->tbl_len; idx++) {
+ 
+-		if ((pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
++		if ((pi->sh->chip == BCMA_CHIP_ID_BCM6362 || pi->sh->chip == BCMA_CHIP_ID_BCM43224) &&
+ 		    (pi->sh->chiprev == 1)) {
+ 			(void)read_phy_reg(pi, tblDataLo);
+ 
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmsmac/phy/phy_n.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmsmac/phy/phy_n.c
+@@ -20678,7 +20678,8 @@ wlc_phy_chanspec_radio2056_setup(struct
+ 					bias = 0x25;
+ 					cascbias = 0x20;
+ 
+-					if ((pi->sh->chip == BCMA_CHIP_ID_BCM43224 ||
++					if (((pi->sh->chip == BCMA_CHIP_ID_BCM6362 || 
++					     pi->sh->chip == BCMA_CHIP_ID_BCM43224 ||
+ 					     pi->sh->chip == BCMA_CHIP_ID_BCM43225) &&
+ 					    pi->sh->chippkg == BCMA_PKG_ID_BCM43224_FAB_SMIC) {
+ 						bias = 0x2a;
+@@ -20788,7 +20789,8 @@ wlc_phy_chanspec_radio2056_setup(struct
+ 
+ 			cascbias = 0x30;
+ 
+-			if ((pi->sh->chip == BCMA_CHIP_ID_BCM43224 ||
++			if ((pi->sh->chip == BCMA_CHIP_ID_BCM6362 ||
++			     pi->sh->chip == BCMA_CHIP_ID_BCM43224 ||
+ 			     pi->sh->chip == BCMA_CHIP_ID_BCM43225) &&
+ 			    pi->sh->chippkg == BCMA_PKG_ID_BCM43224_FAB_SMIC)
+ 				cascbias = 0x35;
+@@ -21126,7 +21128,8 @@ wlc_phy_chanspec_nphy_setup(struct brcms
+ 			wlapi_bmac_core_phypll_ctl(pi->sh->physhim, true);
+ 		}
+ 
+-		if ((pi->sh->chip == BCMA_CHIP_ID_BCM43224) ||
++		if ((pi->sh->chip == BCMA_CHIP_ID_BCM6362) ||
++		    (pi->sh->chip == BCMA_CHIP_ID_BCM43224) ||
+ 		    (pi->sh->chip == BCMA_CHIP_ID_BCM43225)) {
+ 			if (spuravoid == 1) {
+ 				bcma_write16(pi->d11core,
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmsmac/pmu.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmsmac/pmu.c
+@@ -103,6 +103,7 @@ u16 si_pmu_fast_pwrup_delay(struct si_pu
+ 	uint delay = PMU_MAX_TRANSITION_DLY;
+ 
+ 	switch (ai_get_chip_id(sih)) {
++	case BCMA_CHIP_ID_BCM6362:
+ 	case BCMA_CHIP_ID_BCM43224:
+ 	case BCMA_CHIP_ID_BCM43225:
+ 	case BCMA_CHIP_ID_BCM4313:

@@ -44,6 +44,7 @@
 struct bcma_fbs {
 	struct device *dev;
 	struct list_head list;
+	enum bcma_hosttype hosttype;
 	struct ssb_sprom sprom;
 	u32 pci_bus;
 	u32 pci_dev;
@@ -53,19 +54,17 @@ struct bcma_fbs {
 static DEFINE_SPINLOCK(bcma_fbs_lock);
 static struct list_head bcma_fbs_list = LIST_HEAD_INIT(bcma_fbs_list);
 
-int bcma_get_fallback_sprom(struct bcma_bus *bus, struct ssb_sprom *out)
+int bcma_pci_get_fallback_sprom(struct bcma_bus *bus, struct ssb_sprom *out)
 {
 	struct bcma_fbs *pos;
 	u32 pci_bus, pci_dev;
-
-	if (bus->hosttype != BCMA_HOSTTYPE_PCI)
-		return -ENOENT;
 
 	pci_bus = bus->host_pci->bus->number;
 	pci_dev = PCI_SLOT(bus->host_pci->devfn);
 
 	list_for_each_entry(pos, &bcma_fbs_list, list) {
-		if (pos->pci_bus != pci_bus ||
+		if (pos->hosttype != BCMA_HOSTTYPE_PCI ||
+		    pos->pci_bus != pci_bus ||
 		    pos->pci_dev != pci_dev)
 		    	continue;
 
@@ -82,6 +81,35 @@ int bcma_get_fallback_sprom(struct bcma_bus *bus, struct ssb_sprom *out)
 	pr_err("unable to fill SPROM for [%x:%x]\n", pci_bus, pci_dev);
 
 	return -EINVAL;
+}
+
+int bcma_soc_get_fallback_sprom(struct bcma_bus *bus, struct ssb_sprom *out)
+{
+	struct bcma_fbs *pos;
+
+	list_for_each_entry(pos, &bcma_fbs_list, list) {
+		if (pos->hosttype != BCMA_HOSTTYPE_SOC)
+		    	continue;
+
+		memcpy(out, &pos->sprom, sizeof(struct ssb_sprom));
+		dev_info(pos->dev, "requested by SoC");
+
+		return 0;
+	}
+
+	pr_err("unable to fill SPROM for SoC\n");
+
+	return -EINVAL;
+}
+
+int bcma_get_fallback_sprom(struct bcma_bus *bus, struct ssb_sprom *out)
+{
+	if (bus->hosttype == BCMA_HOSTTYPE_PCI)
+		return bcma_pci_get_fallback_sprom(bus, out);
+	else if (bus->hosttype == BCMA_HOSTTYPE_SOC)
+		return bcma_soc_get_fallback_sprom(bus, out);
+	else
+		return -ENOENT;
 }
 
 static s8 sprom_extract_antgain(const u16 *in, u16 offset, u16 mask, u16 shift)
@@ -487,8 +515,11 @@ static int bcma_fbs_probe(struct platform_device *pdev)
 
 	bcma_fbs_set(priv, node);
 
-	of_property_read_u32(node, "pci-bus", &priv->pci_bus);
-	of_property_read_u32(node, "pci-dev", &priv->pci_dev);
+	if (!of_property_read_u32(node, "pci-bus", &priv->pci_bus) &&
+	    !of_property_read_u32(node, "pci-dev", &priv->pci_dev))
+		priv->hosttype = BCMA_HOSTTYPE_PCI;
+	else
+		priv->hosttype = BCMA_HOSTTYPE_SOC;
 
 	of_get_mac_address(node, mac);
 	if (is_valid_ether_addr(mac)) {

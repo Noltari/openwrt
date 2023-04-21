@@ -1,0 +1,406 @@
+--- a/drivers/bcma/host_soc.c
++++ b/drivers/bcma/host_soc.c
+@@ -7,6 +7,8 @@
+ 
+ #include "bcma_private.h"
+ #include "scan.h"
++#include <linux/clk.h>
++#include <linux/reset.h>
+ #include <linux/slab.h>
+ #include <linux/module.h>
+ #include <linux/of_address.h>
+@@ -15,35 +17,35 @@
+ 
+ static u8 bcma_host_soc_read8(struct bcma_device *core, u16 offset)
+ {
+-	return readb(core->io_addr + offset);
++	return __raw_readb(core->io_addr + offset);
+ }
+ 
+ static u16 bcma_host_soc_read16(struct bcma_device *core, u16 offset)
+ {
+-	return readw(core->io_addr + offset);
++	return __raw_readw(core->io_addr + offset);
+ }
+ 
+ static u32 bcma_host_soc_read32(struct bcma_device *core, u16 offset)
+ {
+-	return readl(core->io_addr + offset);
++	return __raw_readl(core->io_addr + offset);
+ }
+ 
+ static void bcma_host_soc_write8(struct bcma_device *core, u16 offset,
+ 				 u8 value)
+ {
+-	writeb(value, core->io_addr + offset);
++	__raw_writeb(value, core->io_addr + offset);
+ }
+ 
+ static void bcma_host_soc_write16(struct bcma_device *core, u16 offset,
+ 				 u16 value)
+ {
+-	writew(value, core->io_addr + offset);
++	__raw_writew(value, core->io_addr + offset);
+ }
+ 
+ static void bcma_host_soc_write32(struct bcma_device *core, u16 offset,
+ 				 u32 value)
+ {
+-	writel(value, core->io_addr + offset);
++	__raw_writel(value, core->io_addr + offset);
+ }
+ 
+ #ifdef CONFIG_BCMA_BLOCKIO
+@@ -64,22 +66,22 @@ static void bcma_host_soc_block_read(str
+ 		break;
+ 	}
+ 	case sizeof(u16): {
+-		__le16 *buf = buffer;
++		u16 *buf = buffer;
+ 
+ 		WARN_ON(count & 1);
+ 		while (count) {
+-			*buf = (__force __le16)__raw_readw(addr);
++			*buf = __raw_readw(addr);
+ 			buf++;
+ 			count -= 2;
+ 		}
+ 		break;
+ 	}
+ 	case sizeof(u32): {
+-		__le32 *buf = buffer;
++		u32 *buf = buffer;
+ 
+ 		WARN_ON(count & 3);
+ 		while (count) {
+-			*buf = (__force __le32)__raw_readl(addr);
++			*buf = __raw_readl(addr);
+ 			buf++;
+ 			count -= 4;
+ 		}
+@@ -108,22 +110,22 @@ static void bcma_host_soc_block_write(st
+ 		break;
+ 	}
+ 	case sizeof(u16): {
+-		const __le16 *buf = buffer;
++		const u16 *buf = buffer;
+ 
+ 		WARN_ON(count & 1);
+ 		while (count) {
+-			__raw_writew((__force u16)(*buf), addr);
++			__raw_writew(*buf, addr);
+ 			buf++;
+ 			count -= 2;
+ 		}
+ 		break;
+ 	}
+ 	case sizeof(u32): {
+-		const __le32 *buf = buffer;
++		const u32 *buf = buffer;
+ 
+ 		WARN_ON(count & 3);
+ 		while (count) {
+-			__raw_writel((__force u32)(*buf), addr);
++			__raw_writel(*buf, addr);
+ 			buf++;
+ 			count -= 4;
+ 		}
+@@ -139,7 +141,7 @@ static u32 bcma_host_soc_aread32(struct
+ {
+ 	if (WARN_ONCE(!core->io_wrap, "Accessed core has no wrapper/agent\n"))
+ 		return ~0;
+-	return readl(core->io_wrap + offset);
++	return __raw_readl(core->io_wrap + offset);
+ }
+ 
+ static void bcma_host_soc_awrite32(struct bcma_device *core, u16 offset,
+@@ -147,7 +149,7 @@ static void bcma_host_soc_awrite32(struc
+ {
+ 	if (WARN_ONCE(!core->io_wrap, "Accessed core has no wrapper/agent\n"))
+ 		return;
+-	writel(value, core->io_wrap + offset);
++	__raw_writel(value, core->io_wrap + offset);
+ }
+ 
+ static const struct bcma_host_ops bcma_host_soc_ops = {
+@@ -176,6 +178,8 @@ int __init bcma_host_soc_register(struct
+ 	if (!bus->mmio)
+ 		return -ENOMEM;
+ 
++//	dev_info(bus->dev, "bcma_host_soc_register: mmio=%px\n", bus->mmio);
++
+ 	/* Host specific */
+ 	bus->hosttype = BCMA_HOSTTYPE_SOC;
+ 	bus->ops = &bcma_host_soc_ops;
+@@ -221,6 +225,8 @@ static int bcma_host_soc_probe(struct pl
+ 	if (!bus->mmio)
+ 		return -ENOMEM;
+ 
++//	dev_info(bus->dev, "bcma_host_soc_probe: mmio=%px\n", bus->mmio);
++
+ 	/* Host specific */
+ 	bus->hosttype = BCMA_HOSTTYPE_SOC;
+ 	bus->ops = &bcma_host_soc_ops;
+@@ -268,8 +274,174 @@ static struct platform_driver bcma_host_
+ 	.remove		= bcma_host_soc_remove,
+ };
+ 
++#define CHIP_REV_ADDR			((void __iomem *) 0xb0000000)
++#define  REV_REVID_SHIFT		0
++#define  REV_REVID_MASK			(0xff << REV_REVID_SHIFT)
++
++#define WLAN_SHIM_MISC			0x00
++#define WLAN_SHIM_MISC_A0		0x38
++#define WLAN_SHIM_FORCE_CLOCKS_ON	BIT(2)
++#define WLAN_SHIM_MACRO_DISABLE		BIT(1)
++#define WLAN_SHIM_MACRO_SOFT_RESET	BIT(0)
++
++#define WLAN_SHIM_STATUS		0x04
++#define WLAN_SHIM_STATUS_A0		0x3c
++
++#define WLAN_CC_CONTROL			0x08
++#define WLAN_CC_CONTROL_A0		0x28
++
++#define WLAN_CC_STATUS			0x0c
++#define WLAN_CC_STATUS_A0		0x2c
++
++#define WLAN_MAC_CONTROL		0x10
++#define WLAN_MAC_CONTROL_A0		0x30
++#define SICF_FGC			BIT(1)
++#define SICF_CLOCK_EN			BIT(0)
++
++#define WLAN_MAC_STATUS			0x14
++#define WLAN_MAC_STATUS_A0		0x34
++
++#define WLAN_CC_ID_A			0x18
++#define WLAN_CC_ID_A_A0			0x00
++
++#define WLAN_CC_ID_B			0x1c
++#define WLAN_CC_ID_B_A0			0x04
++
++#define WLAN_CC_ADDR			0x20
++#define WLAN_CC_ADDR_A0			0x08
++
++#define WLAN_MAC_ID_A			0x24
++#define WLAN_MAC_ID_A_A0		0x0c
++
++#define WLAN_MAC_ID_B			0x28
++#define WLAN_MAC_ID_B_A0		0x10
++
++#define WLAN_MAC_ADDR			0x2c
++#define WLAN_MAC_ADDR_A0		0x14
++
++#define WLAN_SHIM_ID_A			0x30
++#define WLAN_SHIM_ID_A_A0		0x18
++
++#define WLAN_SHIM_ID_B			0x34
++#define WLAN_SHIM_ID_B_A0		0x1c
++
++#define WLAN_SHIM_ADDR			0x38
++#define WLAN_SHIM_ADDR_A0		0x20
++
++#define WLAN_SHIM_EOT			0x3c
++#define WLAN_SHIM_EOT_A0		0x24
++
++#define bcm_wlan_shim_writel(v, o) __raw_writel((v), (wlan_shim) + (o))
++
++static int bcm6362_wlan_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	void __iomem *wlan_shim;
++	struct reset_control *reset_shim;
++	struct reset_control *reset_ubus;
++	struct resource *res;
++	struct clk *clk_ocp;
++	u32 chip_rev;
++	int ret;
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	wlan_shim = devm_ioremap(&pdev->dev, res->start, resource_size(res));
++	if (IS_ERR(wlan_shim))
++		return PTR_ERR(wlan_shim);
++
++//	bmips_wlan_irq = platform_get_irq(pdev, 0);
++//	if (!bmips_wlan_irq)
++//		return -ENODEV;
++
++	reset_shim = devm_reset_control_get(dev, "wlan-shim");
++	if (IS_ERR(reset_shim))
++		return PTR_ERR(reset_shim);
++
++	reset_ubus = devm_reset_control_get(dev, "wlan-ubus");
++	if (IS_ERR(reset_ubus))
++		return PTR_ERR(reset_ubus);
++
++	clk_ocp = devm_clk_get(dev, "wlan-ocp");
++	if (IS_ERR(clk_ocp))
++		return PTR_ERR(clk_ocp);
++
++	ret = clk_prepare_enable(clk_ocp);
++	if (ret) {
++		dev_err(dev, "could not enable clock\n");
++		return ret;
++	}
++
++	chip_rev = __raw_readl(CHIP_REV_ADDR);
++	dev_info(dev, "bcm6362-wlan: detected chip 0x%x\n", chip_rev);
++
++	mdelay(10);
++	reset_control_assert(reset_shim);
++	reset_control_assert(reset_ubus);
++	mdelay(1);
++	reset_control_deassert(reset_shim);
++	reset_control_deassert(reset_ubus);
++	mdelay(1);
++
++	if ((chip_rev & REV_REVID_MASK) == 0xa0)
++	{
++		bcm_wlan_shim_writel((WLAN_SHIM_FORCE_CLOCKS_ON |
++				WLAN_SHIM_MACRO_SOFT_RESET),
++				WLAN_SHIM_MISC_A0);
++		mdelay(1);
++		bcm_wlan_shim_writel((SICF_FGC | SICF_CLOCK_EN),
++				WLAN_MAC_CONTROL_A0);
++		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
++				WLAN_SHIM_MISC_A0);
++		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
++				WLAN_SHIM_MISC_A0);
++		bcm_wlan_shim_writel(0, WLAN_SHIM_MISC_A0);
++		bcm_wlan_shim_writel(SICF_CLOCK_EN, WLAN_MAC_CONTROL_A0);
++	} else {
++		bcm_wlan_shim_writel((WLAN_SHIM_FORCE_CLOCKS_ON |
++				WLAN_SHIM_MACRO_SOFT_RESET),
++				WLAN_SHIM_MISC);
++		mdelay(1);
++		bcm_wlan_shim_writel((SICF_FGC | SICF_CLOCK_EN),
++				WLAN_MAC_CONTROL);
++		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
++				WLAN_SHIM_MISC);
++		bcm_wlan_shim_writel(WLAN_SHIM_FORCE_CLOCKS_ON,
++				WLAN_SHIM_MISC);
++		bcm_wlan_shim_writel(0, WLAN_SHIM_MISC);
++		bcm_wlan_shim_writel(SICF_CLOCK_EN, WLAN_MAC_CONTROL);
++	}
++
++	dev_info(dev, "bcm6362-wlan: setup done!\n");
++
++	return 0;
++}
++
++static const struct of_device_id bcm6362_wlan_of_match[] = {
++	{ .compatible = "brcm,bcm6362-wlan", },
++	{ .compatible = "brcm,bcm63268-wlan", },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, bcm6362_wlan_of_match);
++
++static struct platform_driver bcm6362_wlan_driver = {
++	.probe = bcm6362_wlan_probe,
++	.driver	= {
++		.name = "bcm6362-wlan",
++		.of_match_table = bcm6362_wlan_of_match,
++	},
++};
++
++int __init bcm6362_wlan_init(void)
++{
++	int ret = platform_driver_register(&bcm6362_wlan_driver);
++	if (ret)
++		pr_err("bcm6362-wlan: error registering platform driver!\n");
++	return ret;
++}
++
+ int __init bcma_host_soc_register_driver(void)
+ {
++	bcm6362_wlan_init();
+ 	return platform_driver_register(&bcma_host_soc_driver);
+ }
+ 
+--- a/drivers/bcma/scan.c
++++ b/drivers/bcma/scan.c
+@@ -143,11 +143,15 @@ static const char *bcma_device_name(cons
+ 
+ static u32 bcma_scan_read32(struct bcma_bus *bus, u16 offset)
+ {
+-	return readl(bus->mmio + offset);
++	u32 val = __raw_readl(bus->mmio + offset);
++//	dev_info(bus->dev, "bcma_scan_read32: addr=%px val=%x\n", bus->mmio + offset, val);
++	return val;
+ }
+ 
+ static void bcma_scan_switch_core(struct bcma_bus *bus, u32 addr)
+ {
++	dev_info(bus->dev, "bcma_scan_switch_core: addr=%x\n", addr);
++
+ 	if (bus->hosttype == BCMA_HOSTTYPE_PCI)
+ 		pci_write_config_dword(bus->host_pci, BCMA_PCI_BAR0_WIN,
+ 				       addr);
+@@ -155,7 +159,8 @@ static void bcma_scan_switch_core(struct
+ 
+ static u32 bcma_erom_get_ent(struct bcma_bus *bus, u32 __iomem **eromptr)
+ {
+-	u32 ent = readl(*eromptr);
++	u32 ent = __raw_readl(*eromptr);
++//	dev_info(bus->dev, "bcma_erom_get_ent: eromptr=%px ent=%x\n", *eromptr, ent);
+ 	(*eromptr)++;
+ 	return ent;
+ }
+@@ -299,6 +304,8 @@ static int bcma_get_next_core(struct bcm
+ 	wrappers[1] = (cib & SCAN_CIB_NSW) >> SCAN_CIB_NSW_SHIFT;
+ 	core->id.rev = (cib & SCAN_CIB_REV) >> SCAN_CIB_REV_SHIFT;
+ 
++	dev_info(bus->dev, "bcma_get_next_core: manuf=%x id=%x ports=[%x %x] wrappers[%x %x]\n", core->id.manuf, core->id.id, ports[0], ports[1], wrappers[0], wrappers[1]);
++
+ 	if (((core->id.manuf == BCMA_MANUF_ARM) &&
+ 	     (core->id.id == 0xFFF)) ||
+ 	    (ports[1] == 0)) {
+@@ -314,6 +321,9 @@ static int bcma_get_next_core(struct bcm
+ 		case BCMA_CORE_NS_CHIPCOMMON_B:
+ 		case BCMA_CORE_PMU:
+ 		case BCMA_CORE_GCI:
++		case BCMA_CORE_80211:
++		case BCMA_CORE_CHIPCOMMON:
++		case BCMA_CORE_SHIM:
+ 		/* Not used yet: case BCMA_CORE_OOB_ROUTER: */
+ 			break;
+ 		default:
+@@ -475,6 +485,8 @@ int bcma_bus_scan(struct bcma_bus *bus)
+ 
+ 	eromend = eromptr + BCMA_CORE_SIZE / sizeof(u32);
+ 
++//	dev_info(bus->dev, "bcma_bus_scan: eromptr=%px eromend=%px\n", eromptr, eromend);
++
+ 	bcma_scan_switch_core(bus, erombase);
+ 
+ 	while (eromptr < eromend) {
+--- a/drivers/bcma/driver_chipcommon_pmu.c
++++ b/drivers/bcma/driver_chipcommon_pmu.c
+@@ -246,6 +246,7 @@ static void bcma_pmu_workarounds(struct
+ 		/* Ext PA lines must be enabled for tx on BCM4331 */
+ 		bcma_chipco_bcm4331_ext_pa_lines_ctl(cc, true);
+ 		break;
++	case BCMA_CHIP_ID_BCM6362:
+ 	case BCMA_CHIP_ID_BCM43224:
+ 	case BCMA_CHIP_ID_BCM43421:
+ 		/*
+@@ -552,6 +553,7 @@ void bcma_pmu_spuravoid_pllupdate(struct
+ 		tmp = BCMA_CC_PMU_CTL_PLL_UPD;
+ 		break;
+ 
++	case BCMA_CHIP_ID_BCM6362:
+ 	case BCMA_CHIP_ID_BCM43224:
+ 	case BCMA_CHIP_ID_BCM43225:
+ 	case BCMA_CHIP_ID_BCM43421:
+--- a/drivers/bcma/sprom.c
++++ b/drivers/bcma/sprom.c
+@@ -533,6 +533,10 @@ static bool bcma_sprom_onchip_available(
+ 	case BCMA_CHIP_ID_BCM4331:
+ 		present = chip_status & BCMA_CC_CHIPST_4331_OTP_PRESENT;
+ 		break;
++	case BCMA_CHIP_ID_BCM6362:
++		pr_info("bcma_sprom_onchip_available: chip_status=%x\n", chip_status);
++		present = true;
++		break;
+ 	case BCMA_CHIP_ID_BCM43142:
+ 	case BCMA_CHIP_ID_BCM43224:
+ 	case BCMA_CHIP_ID_BCM43225:

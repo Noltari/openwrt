@@ -58,6 +58,16 @@
 			gpios = <&gpio 34 GPIO_ACTIVE_LOW>;
 		};
 	};
+
+	bcm6362-sprom {
+		compatible = "brcm,bcma-sprom";
+
+		nvmem-cells = <&macaddr_cferom_6a0>;
+		nvmem-cell-names = "mac-address";
+		mac-address-increment = <1>;
+
+		brcm,sprom = "brcm/bcm6362-sprom.bin";
+	};
 };
 
 &ehci {
@@ -300,6 +310,10 @@
 };
 
 &usbh {
+	status = "okay";
+};
+
+&wlan {
 	status = "okay";
 };
 

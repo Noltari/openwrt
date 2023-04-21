@@ -122,7 +122,7 @@ config PACKAGE_B43_USE_SSB
 config PACKAGE_B43_USE_BCMA
 	select PACKAGE_kmod-bcma
 	tristate
-	depends on !TARGET_bcm47xx && !TARGET_bcm53xx
+	depends on !TARGET_bcm47xx && !TARGET_bcm53xx && !TARGET_bmips_bcm6362 && !TARGET_bmips_bcm63268
 	default PACKAGE_kmod-b43 if PACKAGE_B43_BUSES_BCMA_AND_SSB
 	default PACKAGE_kmod-b43 if PACKAGE_B43_BUSES_BCMA
 
