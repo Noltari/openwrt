@@ -17,14 +17,15 @@
 	};
 
 	keys {
-		compatible = "gpio-keys-polled";
-		poll-interval = <100>;
+		compatible = "gpio-keys";
 
 		reset {
 			label = "reset";
 			gpios = <&gpio 34 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_RESTART>;
 			debounce-interval = <60>;
+			interrupt-parent = <&ext_intc0>;
+			interrupts = <BCM6368_EXTIRQ0_0 IRQ_TYPE_EDGE_FALLING>;
 		};
 	};
 

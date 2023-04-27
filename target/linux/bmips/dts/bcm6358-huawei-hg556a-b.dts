@@ -16,7 +16,7 @@
 		led-usb = &led_hspa_red;
 	};
 
-	keys {
+	keys-polled {
 		compatible = "gpio-keys-polled";
 		poll-interval = <100>;
 

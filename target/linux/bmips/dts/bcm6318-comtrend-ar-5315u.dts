@@ -17,7 +17,7 @@
 		led-usb = &led_usb_green;
 	};
 
-	keys {
+	keys-polled {
 		compatible = "gpio-keys-polled";
 		poll-interval = <100>;
 
@@ -27,12 +27,18 @@
 			linux,code = <KEY_WPS_BUTTON>;
 			debounce-interval = <60>;
 		};
+	};
+
+	keys {
+		compatible = "gpio-keys";
 
 		reset {
 			label = "reset";
 			gpios = <&gpio 33 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_RESTART>;
 			debounce-interval = <60>;
+			interrupt-parent = <&ext_intc>;
+			interrupts = <BCM6318_EXTIRQ_0 IRQ_TYPE_EDGE_FALLING>;
 		};
 	};
 
