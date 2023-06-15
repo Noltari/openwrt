@@ -1,0 +1,175 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include "bcm63268.dtsi"
+
+/ {
+	model = "ZyXEL P8701T";
+	compatible = "zyxel,p8701t", "brcm,bcm63168", "brcm,bcm63268";
+
+/*
+	aliases {
+		led-boot = &led_power_green;
+		led-failsafe = &led_power_green;
+		led-running = &led_power_green;
+		led-upgrade = &led_power_green;
+	};
+
+	keys {
+		compatible = "gpio-keys-polled";
+		poll-interval = <100>;
+
+		reset {
+			label = "reset";
+			gpios = <&gpio 32 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+			debounce-interval = <60>;
+		};
+
+		wps {
+			label = "wps";
+			gpios = <&gpio 33 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
+			debounce-interval = <60>;
+		};
+	};
+*/
+};
+
+&ehci {
+	status = "okay";
+};
+
+&ethernet {
+	status = "okay";
+
+	nvmem-cells = <&macaddr_cferom_6a0>;
+	nvmem-cell-names = "mac-address";
+};
+
+/*
+&leds {
+	status = "okay";
+
+	brcm,serial-leds;
+	brcm,serial-dat-low;
+	brcm,serial-shift-inv;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_serial_led>;
+
+	led_power_green: led@20 {
+		reg = <20>;
+		active-low;
+		label = "green:power";
+	};
+};
+*/
+
+&nflash {
+	status = "okay";
+
+	nandcs@0 {
+		compatible = "brcm,nandcs";
+		reg = <0>;
+		nand-ecc-step-size = <512>;
+		nand-ecc-strength = <15>;
+		nand-on-flash-bbt;
+		brcm,nand-oob-sector-size = <64>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			cferom: partition@0 {
+				label = "cferom";
+				reg = <0x0000000 0x0020000>;
+				read-only;
+			};
+
+			partition@20000 {
+				label = "bootflag";
+				reg = <0x0020000 0x0020000>;
+				read-only;
+			};
+
+			partition@40000 {
+				compatible = "zyxel,wfi";
+				label = "img1";
+				reg = <0x0040000 0x3fe0000>;
+			};
+
+			partition@4020000 {
+				compatible = "zyxel,wfi";
+				label = "img2";
+				reg = <0x4020000 0x3ac0000>;
+			};
+
+			partition@7ea0000 {
+				label = "data";
+				reg = <0x7ea0000 0x0160000>;
+			};
+		};
+	};
+};
+
+&ohci {
+	status = "okay";
+};
+
+&switch0 {
+	ports {
+		port@0 {
+			reg = <0>;
+			label = "lan2";
+
+			phy-handle = <&phy1>;
+			phy-mode = "mii";
+		};
+
+		port@1 {
+			reg = <1>;
+			label = "lan3";
+
+			phy-handle = <&phy2>;
+			phy-mode = "mii";
+		};
+
+		port@2 {
+			reg = <2>;
+			label = "lan4";
+
+			phy-handle = <&phy3>;
+			phy-mode = "mii";
+		};
+
+		port@3 {
+			reg = <3>;
+			label = "lan1";
+
+			phy-handle = <&phy4>;
+			phy-mode = "mii";
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&usbh {
+	status = "okay";
+};
+
+&cferom {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_cferom_6a0: macaddr@6a0 {
+		reg = <0x6a0 0x6>;
+	};
+};

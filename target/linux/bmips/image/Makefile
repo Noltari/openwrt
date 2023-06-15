@@ -250,6 +250,11 @@ define Build/cfe-wfi-tag
 	mv $@.new $@
 endef
 
+define Build/zyxel-bin
+	$(STAGING_DIR_HOST)/bin/zyxbcm -i $@ -o $@.zyxel
+	mv $@.zyxel $@
+endef
+
 ### Device scripts ###
 define Device/Default
   PROFILES = Default $$(DEVICE_NAME)

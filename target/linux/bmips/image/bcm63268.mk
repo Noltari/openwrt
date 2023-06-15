@@ -81,3 +81,25 @@ define Device/sercomm_shg2500
   SERCOMM_SWVER := 3207
 endef
 TARGET_DEVICES += sercomm_shg2500
+
+define Device/zyxel_p8701t
+  $(Device/bcm63xx-nand)
+  IMAGE/cfe.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) |\
+    append-ubi | cfe-bin
+  DEVICE_VENDOR := ZyXEL
+  DEVICE_MODEL := P8701T
+  CHIP_ID := 63268
+  CFE_BOARD_ID := 963168VX
+  CFE_EXTRAS += --rsa-signature "ZyXEL_000e" --signature "ver. 2.0"
+  BLOCKSIZE := 0x20000
+  SOC := bcm63168
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  SUBPAGESIZE := 512
+  VID_HDR_OFFSET := 2048
+  DEVICE_PACKAGES += $(USB2_PACKAGES) \
+    kmod-leds-bcm6328
+  CFE_WFI_FLASH_TYPE := 3
+  CFE_WFI_VERSION := 0x5732
+endef
+TARGET_DEVICES += zyxel_p8701t
