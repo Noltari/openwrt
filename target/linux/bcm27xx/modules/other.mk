@@ -20,6 +20,23 @@ endef
 $(eval $(call KernelPackage,pwm-raspberrypi-poe))
 
 
+define KernelPackage/rpivid-mem
+  SUBMENU:=$(OTHER_MENU)
+  TITLE:=Character device driver for the RPiVid decoder
+  KCONFIG:=CONFIG_RPIVID_MEM
+  FILES:=$(LINUX_DIR)/drivers/char/broadcom/rpivid-mem.ko
+  AUTOLOAD:=$(call AutoLoad,20,rpivid-mem)
+  DEPENDS:=@TARGET_bcm27xx
+endef
+
+define KernelPackage/rpivid-mem/description
+  This package contains the Character device driver for the Raspberry Pi
+  RPiVid video decoder.
+endef
+
+$(eval $(call KernelPackage,rpivid-mem))
+
+
 define KernelPackage/smi-bcm2835
   SUBMENU:=$(OTHER_MENU)
   TITLE:=BCM2835 SMI driver

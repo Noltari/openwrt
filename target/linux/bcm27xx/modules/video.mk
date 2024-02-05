@@ -100,6 +100,23 @@ endef
 $(eval $(call KernelPackage,vc-sm-cma))
 
 
+define KernelPackage/rpivid-hevc
+  TITLE:=RPiVid HEVC decoder driver
+  KCONFIG:= \
+    CONFIG_VIDEO_RPIVID
+  FILES:= \
+    $(LINUX_DIR)/drivers/staging/media/rpivid/rpivid-hevc.ko
+  AUTOLOAD:=$(call AutoLoad,67,rpivid-hevc)
+  $(call AddDepends/video,@TARGET_bcm27xx +kmod-rpivid-mem +kmod-video-dma +kmod-video-mem2mem)
+endef
+
+define KernelPackage/rpivid-hevc/description
+  Raspberry Pi HEVC HW decoder.
+endef
+
+$(eval $(call KernelPackage,rpivid-hevc))
+
+
 define KernelPackage/vchiq-mmal-bcm2835
   TITLE:=BCM2835 MMAL VCHIQ service
   KCONFIG:= \
