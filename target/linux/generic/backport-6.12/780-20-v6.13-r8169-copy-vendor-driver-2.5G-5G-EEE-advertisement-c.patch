@@ -22,14 +22,15 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
 
 --- a/drivers/net/ethernet/realtek/r8169_main.c
 +++ b/drivers/net/ethernet/realtek/r8169_main.c
-@@ -5227,6 +5227,11 @@ static int r8169_mdio_register(struct rt
+@@ -5227,6 +5227,12 @@ static int r8169_mdio_register(struct rt
  		phy_support_eee(tp->phydev);
  	phy_support_asym_pause(tp->phydev);
  
 +	/* mimic behavior of r8125/r8126 vendor drivers */
 +	if (tp->mac_version == RTL_GIGA_MAC_VER_61)
-+		tp->phydev->eee_broken_modes |= MDIO_EEE_2_5GT;
-+	tp->phydev->eee_broken_modes |= MDIO_EEE_5GT;
++		phy_set_eee_broken(tp->phydev,
++				   ETHTOOL_LINK_MODE_2500baseT_Full_BIT);
++	phy_set_eee_broken(tp->phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 +
  	/* PHY will be woken up in rtl_open() */
  	phy_suspend(tp->phydev);

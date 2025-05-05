@@ -1,0 +1,49 @@
+From 5e7a74b6a35782be83b433979e71df2636ab05f0 Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Mon, 10 Feb 2025 21:50:10 +0100
+Subject: [PATCH] net: phy: rename phy_set_eee_broken to phy_disable_eee_mode
+
+Consider that an EEE mode may not be broken but simply not supported
+by the MAC, and rename function phy_set_eee_broken().
+
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://patch.msgid.link/30deb630-3f6b-4ffb-a1e6-a9736021f43a@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/ethernet/realtek/r8169_main.c | 6 +++---
+ include/linux/phy.h                       | 6 +++---
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -5313,9 +5313,9 @@ static int r8169_mdio_register(struct rt
+ 
+ 	/* mimic behavior of r8125/r8126 vendor drivers */
+ 	if (tp->mac_version == RTL_GIGA_MAC_VER_61)
+-		phy_set_eee_broken(tp->phydev,
+-				   ETHTOOL_LINK_MODE_2500baseT_Full_BIT);
+-	phy_set_eee_broken(tp->phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
++		phy_disable_eee_mode(tp->phydev,
++				     ETHTOOL_LINK_MODE_2500baseT_Full_BIT);
++	phy_disable_eee_mode(tp->phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
+ 
+ 	/* PHY will be woken up in rtl_open() */
+ 	phy_suspend(tp->phydev);
+--- a/include/linux/phy.h
++++ b/include/linux/phy.h
+@@ -1274,11 +1274,11 @@ void of_set_phy_eee_broken(struct phy_de
+ int phy_speed_down_core(struct phy_device *phydev);
+ 
+ /**
+- * phy_set_eee_broken - Mark an EEE mode as broken so that it isn't advertised.
++ * phy_disable_eee_mode - Don't advertise an EEE mode.
+  * @phydev: The phy_device struct
+- * @link_mode: The broken EEE mode
++ * @link_mode: The EEE mode to be disabled
+  */
+-static inline void phy_set_eee_broken(struct phy_device *phydev, u32 link_mode)
++static inline void phy_disable_eee_mode(struct phy_device *phydev, u32 link_mode)
+ {
+ 	linkmode_set_bit(link_mode, phydev->eee_disabled_modes);
+ }

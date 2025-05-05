@@ -1,0 +1,34 @@
+From 3cc97d2fa9876d30ff5a2665211cf11daf01beeb Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Wed, 6 Nov 2024 21:24:18 +0100
+Subject: [PATCH] net: phy: broadcom: use genphy_c45_an_config_eee_aneg in
+ bcm_config_lre_aneg
+
+bcm_config_lre_aneg() is the only user of genphy_config_eee_advert(),
+therefore use genphy_c45_an_config_eee_aneg() instead. The resulting
+functionality is equivalent, and bcm_config_lre_aneg() follows the
+structure of __genphy_config_aneg().
+In a follow-up step genphy_config_eee_advert() can be removed.
+
+Note: We preserve the current behavior to ignore errors.
+
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Reviewed-by: Florian Fainelli <florian.fainelli@broadcom.com>
+Link: https://patch.msgid.link/6e5cd4ab-28bb-4d82-b449-fec85f3d1e8a@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/phy/bcm-phy-lib.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/net/phy/bcm-phy-lib.c
++++ b/drivers/net/phy/bcm-phy-lib.c
+@@ -1137,7 +1137,7 @@ int bcm_config_lre_aneg(struct phy_devic
+ {
+ 	int err;
+ 
+-	if (genphy_config_eee_advert(phydev))
++	if (genphy_c45_an_config_eee_aneg(phydev) > 0)
+ 		changed = true;
+ 
+ 	err = bcm_setup_lre_master_slave(phydev);

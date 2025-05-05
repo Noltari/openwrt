@@ -1,0 +1,31 @@
+From a9b6a860d7789d8183530aedbb46cf70f843e40d Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Sun, 16 Feb 2025 22:16:34 +0100
+Subject: [PATCH] net: phy: improve phy_disable_eee_mode
+
+If a mode is to be disabled, remove it from advertising_eee.
+Disabling EEE modes shall be done before calling phy_start(),
+warn if that's not the case.
+
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Reviewed-by: Russell King (Oracle) <rmk+kernel@armlinux.org.uk>
+Link: https://patch.msgid.link/92164896-38ff-4474-b98b-e83fc05b9509@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ include/linux/phy.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/include/linux/phy.h
++++ b/include/linux/phy.h
+@@ -1289,7 +1289,10 @@ static inline bool phy_is_started(struct
+  */
+ static inline void phy_disable_eee_mode(struct phy_device *phydev, u32 link_mode)
+ {
++	WARN_ON(phy_is_started(phydev));
++
+ 	linkmode_set_bit(link_mode, phydev->eee_disabled_modes);
++	linkmode_clear_bit(link_mode, phydev->advertising_eee);
+ }
+ 
+ void phy_resolve_aneg_pause(struct phy_device *phydev);

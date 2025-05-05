@@ -1,0 +1,26 @@
+From 25cc469d6d344f5772e9fb6a5cf9d82a690afe68 Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Tue, 7 Jan 2025 21:13:44 +0100
+Subject: [PATCH] net: phy: micrel: use helper phy_disable_eee
+
+Use helper phy_disable_eee() instead of setting phylib-internal bitmap
+eee_broken_modes directly.
+
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Link: https://patch.msgid.link/5e19eebe-121e-4a41-b36d-a35631279dd8@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/phy/micrel.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -2006,7 +2006,7 @@ static int ksz9477_config_init(struct ph
+ 	 * in this switch shall be regarded as broken.
+ 	 */
+ 	if (phydev->dev_flags & MICREL_NO_EEE)
+-		linkmode_fill(phydev->eee_broken_modes);
++		phy_disable_eee(phydev);
+ 
+ 	return kszphy_config_init(phydev);
+ }

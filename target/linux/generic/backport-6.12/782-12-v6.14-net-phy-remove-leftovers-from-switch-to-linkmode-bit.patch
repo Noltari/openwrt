@@ -1,0 +1,159 @@
+From 12d5151be01017401b8d2681f3c975265a233eaf Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Thu, 16 Jan 2025 22:38:40 +0100
+Subject: [PATCH] net: phy: remove leftovers from switch to linkmode bitmaps
+
+We have some leftovers from the switch to linkmode bitmaps which
+- have never been used
+- are not used any longer
+- have no user outside phy_device.c
+So remove them.
+
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Link: https://patch.msgid.link/5493b96e-88bb-4230-a911-322659ec5167@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/phy/phy_device.c | 54 ++----------------------------------
+ include/linux/phy.h          | 18 ------------
+ 2 files changed, 2 insertions(+), 70 deletions(-)
+
+--- a/drivers/net/phy/phy_device.c
++++ b/drivers/net/phy/phy_device.c
+@@ -59,15 +59,9 @@ EXPORT_SYMBOL_GPL(phy_gbit_features);
+ __ETHTOOL_DECLARE_LINK_MODE_MASK(phy_gbit_fibre_features) __ro_after_init;
+ EXPORT_SYMBOL_GPL(phy_gbit_fibre_features);
+ 
+-__ETHTOOL_DECLARE_LINK_MODE_MASK(phy_gbit_all_ports_features) __ro_after_init;
+-EXPORT_SYMBOL_GPL(phy_gbit_all_ports_features);
+-
+ __ETHTOOL_DECLARE_LINK_MODE_MASK(phy_10gbit_features) __ro_after_init;
+ EXPORT_SYMBOL_GPL(phy_10gbit_features);
+ 
+-__ETHTOOL_DECLARE_LINK_MODE_MASK(phy_10gbit_fec_features) __ro_after_init;
+-EXPORT_SYMBOL_GPL(phy_10gbit_fec_features);
+-
+ const int phy_basic_ports_array[3] = {
+ 	ETHTOOL_LINK_MODE_Autoneg_BIT,
+ 	ETHTOOL_LINK_MODE_TP_BIT,
+@@ -75,12 +69,7 @@ const int phy_basic_ports_array[3] = {
+ };
+ EXPORT_SYMBOL_GPL(phy_basic_ports_array);
+ 
+-const int phy_fibre_port_array[1] = {
+-	ETHTOOL_LINK_MODE_FIBRE_BIT,
+-};
+-EXPORT_SYMBOL_GPL(phy_fibre_port_array);
+-
+-const int phy_all_ports_features_array[7] = {
++static const int phy_all_ports_features_array[7] = {
+ 	ETHTOOL_LINK_MODE_Autoneg_BIT,
+ 	ETHTOOL_LINK_MODE_TP_BIT,
+ 	ETHTOOL_LINK_MODE_MII_BIT,
+@@ -89,7 +78,6 @@ const int phy_all_ports_features_array[7
+ 	ETHTOOL_LINK_MODE_BNC_BIT,
+ 	ETHTOOL_LINK_MODE_Backplane_BIT,
+ };
+-EXPORT_SYMBOL_GPL(phy_all_ports_features_array);
+ 
+ const int phy_10_100_features_array[4] = {
+ 	ETHTOOL_LINK_MODE_10baseT_Half_BIT,
+@@ -123,20 +111,6 @@ const int phy_10gbit_features_array[1] =
+ };
+ EXPORT_SYMBOL_GPL(phy_10gbit_features_array);
+ 
+-static const int phy_10gbit_fec_features_array[1] = {
+-	ETHTOOL_LINK_MODE_10000baseR_FEC_BIT,
+-};
+-
+-__ETHTOOL_DECLARE_LINK_MODE_MASK(phy_10gbit_full_features) __ro_after_init;
+-EXPORT_SYMBOL_GPL(phy_10gbit_full_features);
+-
+-static const int phy_10gbit_full_features_array[] = {
+-	ETHTOOL_LINK_MODE_10baseT_Full_BIT,
+-	ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+-	ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
+-	ETHTOOL_LINK_MODE_10000baseT_Full_BIT,
+-};
+-
+ static const int phy_eee_cap1_features_array[] = {
+ 	ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+ 	ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
+@@ -198,20 +172,7 @@ static void features_init(void)
+ 	linkmode_set_bit_array(phy_gbit_features_array,
+ 			       ARRAY_SIZE(phy_gbit_features_array),
+ 			       phy_gbit_fibre_features);
+-	linkmode_set_bit_array(phy_fibre_port_array,
+-			       ARRAY_SIZE(phy_fibre_port_array),
+-			       phy_gbit_fibre_features);
+-
+-	/* 10/100 half/full + 1000 half/full + TP/MII/FIBRE/AUI/BNC/Backplane*/
+-	linkmode_set_bit_array(phy_all_ports_features_array,
+-			       ARRAY_SIZE(phy_all_ports_features_array),
+-			       phy_gbit_all_ports_features);
+-	linkmode_set_bit_array(phy_10_100_features_array,
+-			       ARRAY_SIZE(phy_10_100_features_array),
+-			       phy_gbit_all_ports_features);
+-	linkmode_set_bit_array(phy_gbit_features_array,
+-			       ARRAY_SIZE(phy_gbit_features_array),
+-			       phy_gbit_all_ports_features);
++	linkmode_set_bit(ETHTOOL_LINK_MODE_FIBRE_BIT, phy_gbit_fibre_features);
+ 
+ 	/* 10/100 half/full + 1000 half/full + 10G full*/
+ 	linkmode_set_bit_array(phy_all_ports_features_array,
+@@ -227,17 +188,6 @@ static void features_init(void)
+ 			       ARRAY_SIZE(phy_10gbit_features_array),
+ 			       phy_10gbit_features);
+ 
+-	/* 10/100/1000/10G full */
+-	linkmode_set_bit_array(phy_all_ports_features_array,
+-			       ARRAY_SIZE(phy_all_ports_features_array),
+-			       phy_10gbit_full_features);
+-	linkmode_set_bit_array(phy_10gbit_full_features_array,
+-			       ARRAY_SIZE(phy_10gbit_full_features_array),
+-			       phy_10gbit_full_features);
+-	/* 10G FEC only */
+-	linkmode_set_bit_array(phy_10gbit_fec_features_array,
+-			       ARRAY_SIZE(phy_10gbit_fec_features_array),
+-			       phy_10gbit_fec_features);
+ 	linkmode_set_bit_array(phy_eee_cap1_features_array,
+ 			       ARRAY_SIZE(phy_eee_cap1_features_array),
+ 			       phy_eee_cap1_features);
+--- a/include/linux/phy.h
++++ b/include/linux/phy.h
+@@ -32,19 +32,6 @@
+ #include <linux/atomic.h>
+ #include <net/eee.h>
+ 
+-#define PHY_DEFAULT_FEATURES	(SUPPORTED_Autoneg | \
+-				 SUPPORTED_TP | \
+-				 SUPPORTED_MII)
+-
+-#define PHY_10BT_FEATURES	(SUPPORTED_10baseT_Half | \
+-				 SUPPORTED_10baseT_Full)
+-
+-#define PHY_100BT_FEATURES	(SUPPORTED_100baseT_Half | \
+-				 SUPPORTED_100baseT_Full)
+-
+-#define PHY_1000BT_FEATURES	(SUPPORTED_1000baseT_Half | \
+-				 SUPPORTED_1000baseT_Full)
+-
+ extern __ETHTOOL_DECLARE_LINK_MODE_MASK(phy_basic_features) __ro_after_init;
+ extern __ETHTOOL_DECLARE_LINK_MODE_MASK(phy_basic_t1_features) __ro_after_init;
+ extern __ETHTOOL_DECLARE_LINK_MODE_MASK(phy_basic_t1s_p2mp_features) __ro_after_init;
+@@ -62,16 +49,11 @@ extern __ETHTOOL_DECLARE_LINK_MODE_MASK(
+ #define PHY_BASIC_T1S_P2MP_FEATURES ((unsigned long *)&phy_basic_t1s_p2mp_features)
+ #define PHY_GBIT_FEATURES ((unsigned long *)&phy_gbit_features)
+ #define PHY_GBIT_FIBRE_FEATURES ((unsigned long *)&phy_gbit_fibre_features)
+-#define PHY_GBIT_ALL_PORTS_FEATURES ((unsigned long *)&phy_gbit_all_ports_features)
+ #define PHY_10GBIT_FEATURES ((unsigned long *)&phy_10gbit_features)
+-#define PHY_10GBIT_FEC_FEATURES ((unsigned long *)&phy_10gbit_fec_features)
+-#define PHY_10GBIT_FULL_FEATURES ((unsigned long *)&phy_10gbit_full_features)
+ #define PHY_EEE_CAP1_FEATURES ((unsigned long *)&phy_eee_cap1_features)
+ #define PHY_EEE_CAP2_FEATURES ((unsigned long *)&phy_eee_cap2_features)
+ 
+ extern const int phy_basic_ports_array[3];
+-extern const int phy_fibre_port_array[1];
+-extern const int phy_all_ports_features_array[7];
+ extern const int phy_10_100_features_array[4];
+ extern const int phy_basic_t1_features_array[3];
+ extern const int phy_basic_t1s_p2mp_features_array[2];

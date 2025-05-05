@@ -1,0 +1,50 @@
+From 8a6a77bb5a41d5a91c6155e1b902d9f75b5bf9a6 Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Sun, 16 Feb 2025 22:15:42 +0100
+Subject: [PATCH] net: phy: move definition of phy_is_started before
+ phy_disable_eee_mode
+
+In preparation of a follow-up patch, move phy_is_started() to before
+phy_disable_eee_mode().
+
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Reviewed-by: Russell King (Oracle) <rmk+kernel@armlinux.org.uk>
+Link: https://patch.msgid.link/04d1e7a5-f4c0-42ab-8fa4-88ad26b74813@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ include/linux/phy.h | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+--- a/include/linux/phy.h
++++ b/include/linux/phy.h
+@@ -1274,22 +1274,22 @@ void of_set_phy_eee_broken(struct phy_de
+ int phy_speed_down_core(struct phy_device *phydev);
+ 
+ /**
+- * phy_disable_eee_mode - Don't advertise an EEE mode.
++ * phy_is_started - Convenience function to check whether PHY is started
+  * @phydev: The phy_device struct
+- * @link_mode: The EEE mode to be disabled
+  */
+-static inline void phy_disable_eee_mode(struct phy_device *phydev, u32 link_mode)
++static inline bool phy_is_started(struct phy_device *phydev)
+ {
+-	linkmode_set_bit(link_mode, phydev->eee_disabled_modes);
++	return phydev->state >= PHY_UP;
+ }
+ 
+ /**
+- * phy_is_started - Convenience function to check whether PHY is started
++ * phy_disable_eee_mode - Don't advertise an EEE mode.
+  * @phydev: The phy_device struct
++ * @link_mode: The EEE mode to be disabled
+  */
+-static inline bool phy_is_started(struct phy_device *phydev)
++static inline void phy_disable_eee_mode(struct phy_device *phydev, u32 link_mode)
+ {
+-	return phydev->state >= PHY_UP;
++	linkmode_set_bit(link_mode, phydev->eee_disabled_modes);
+ }
+ 
+ void phy_resolve_aneg_pause(struct phy_device *phydev);
