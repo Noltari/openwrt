@@ -126,6 +126,21 @@ endef
 $(eval $(call KernelPackage,hwmon-drivetemp))
 
 
+define KernelPackage/hwmon-emc2101
+  TITLE:=Microchip EMC2101 fan controller
+  KCONFIG:=CONFIG_SENSORS_EMC2101
+  FILES:=$(LINUX_DIR)/drivers/hwmon/emc2101.ko
+  AUTOLOAD:=$(call AutoProbe,emc2101)
+  $(call AddDepends/hwmon,+kmod-i2c-core)
+endef
+
+define KernelPackage/hwmon-emc2101/description
+ Kernel module for Microchip EMC2101 fan controllers
+endef
+
+$(eval $(call KernelPackage,hwmon-emc2101))
+
+
 define KernelPackage/hwmon-emc2305
   TITLE:=Microchip EMC2301/2/3/5 fan controller
   KCONFIG:=CONFIG_SENSORS_EMC2305

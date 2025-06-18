@@ -86,6 +86,7 @@ define Device/rpi
 	raspberrypi,compute-module raspberrypi,compute-module-1 \
 	raspberrypi,model-zero raspberrypi,model-zero-w
   DEVICE_PACKAGES := \
+	kmod-hwmon-emc2101 \
 	cypress-firmware-43430-sdio \
 	brcmfmac-nvram-43430-sdio \
 	kmod-brcmfmac wpad-basic-mbedtls \
@@ -125,6 +126,7 @@ define Device/rpi-2
 	raspberrypi,400 raspberrypi,4-compute-module raspberrypi,4-model-b \
 	raspberrypi,model-zero-2 raspberrypi,model-zero-2-w
   DEVICE_PACKAGES := \
+	kmod-hwmon-emc2101 \
 	cypress-firmware-43430-sdio \
 	brcmfmac-nvram-43430-sdio \
 	cypress-firmware-43455-sdio \
@@ -161,6 +163,7 @@ define Device/rpi-3
 	raspberrypi,3-compute-module raspberrypi,compute-module-3 \
 	raspberrypi,model-zero-2 raspberrypi,model-zero-2-w
   DEVICE_PACKAGES := \
+	kmod-hwmon-emc2101 \
 	cypress-firmware-43430-sdio \
 	brcmfmac-nvram-43430-sdio \
 	cypress-firmware-43455-sdio \
@@ -186,6 +189,7 @@ define Device/rpi-4
 	raspberrypi,4-compute-module \
 	raspberrypi,4-model-b
   DEVICE_PACKAGES := \
+	kmod-hwmon-emc2101 \
 	cypress-firmware-43455-sdio \
 	brcmfmac-nvram-43455-sdio \
 	kmod-brcmfmac wpad-basic-mbedtls \
@@ -216,6 +220,7 @@ define Device/rpi-5
 	raspberrypi,5-compute-module \
 	raspberrypi,5-model-b
   DEVICE_PACKAGES := \
+	kmod-hwmon-emc2101 \
 	cypress-firmware-43455-sdio \
 	brcmfmac-nvram-43455-sdio \
 	kmod-brcmfmac wpad-basic-mbedtls \

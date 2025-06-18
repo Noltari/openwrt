@@ -1,0 +1,43 @@
+From 4d7014bcb6f611211b91dc9d0666121967253713 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
+Date: Mon, 16 Jun 2025 20:35:06 +0200
+Subject: [PATCH] drivers: hwmon: add EMC2101 driver
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+---
+ drivers/hwmon/Kconfig   |   10 +
+ drivers/hwmon/Makefile  |    1 +
+ 2 files changed, 11 insertions(+)
+
+--- a/drivers/hwmon/Kconfig
++++ b/drivers/hwmon/Kconfig
+@@ -1937,6 +1937,16 @@ config SENSORS_EMC1403
+ 	  Threshold values can be configured using sysfs.
+ 	  Data from the different diodes are accessible via sysfs.
+ 
++config SENSORS_EMC2101
++	tristate "SMSC EMC2101"
++	depends on I2C
++	help
++	  If you say yes here you get support for the SMSC EMC2101
++	  fan controller chips.
++
++	  This driver can also be built as a module. If so, the module
++	  will be called emc2101.
++
+ config SENSORS_EMC2103
+ 	tristate "SMSC EMC2103"
+ 	depends on I2C
+--- a/drivers/hwmon/Makefile
++++ b/drivers/hwmon/Makefile
+@@ -72,6 +72,7 @@ obj-$(CONFIG_SENSORS_DRIVETEMP)	+= drive
+ obj-$(CONFIG_SENSORS_DS620)	+= ds620.o
+ obj-$(CONFIG_SENSORS_DS1621)	+= ds1621.o
+ obj-$(CONFIG_SENSORS_EMC1403)	+= emc1403.o
++obj-$(CONFIG_SENSORS_EMC2101)	+= emc2101.o
+ obj-$(CONFIG_SENSORS_EMC2103)	+= emc2103.o
+ obj-$(CONFIG_SENSORS_EMC2305)	+= emc2305.o
+ obj-$(CONFIG_SENSORS_EMC6W201)	+= emc6w201.o
