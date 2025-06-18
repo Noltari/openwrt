@@ -1,0 +1,51 @@
+From eb708cd631a8dca17ff004ccc39bbeb096c1db22 Mon Sep 17 00:00:00 2001
+From: Richard Fitzgerald <rf@opensource.cirrus.com>
+Date: Wed, 11 Dec 2024 13:35:58 +0000
+Subject: [PATCH] regmap: regmap_multi_reg_read(): make register list const
+
+Mark the list of registers passed into regmap_multi_reg_read() as a
+pointer to const. This allows the caller to define the register list
+as const data.
+
+This requires making the same change to _regmap_bulk_read(), which is
+called by regmap_multi_reg_read().
+
+Signed-off-by: Richard Fitzgerald <rf@opensource.cirrus.com>
+Link: https://patch.msgid.link/20241211133558.884669-1-rf@opensource.cirrus.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/base/regmap/regmap.c | 4 ++--
+ include/linux/regmap.h       | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -3116,7 +3116,7 @@ int regmap_fields_read(struct regmap_fie
+ EXPORT_SYMBOL_GPL(regmap_fields_read);
+ 
+ static int _regmap_bulk_read(struct regmap *map, unsigned int reg,
+-			     unsigned int *regs, void *val, size_t val_count)
++			     const unsigned int *regs, void *val, size_t val_count)
+ {
+ 	u32 *u32 = val;
+ 	u16 *u16 = val;
+@@ -3210,7 +3210,7 @@ EXPORT_SYMBOL_GPL(regmap_bulk_read);
+  * A value of zero will be returned on success, a negative errno will
+  * be returned in error cases.
+  */
+-int regmap_multi_reg_read(struct regmap *map, unsigned int *regs, void *val,
++int regmap_multi_reg_read(struct regmap *map, const unsigned int *regs, void *val,
+ 			  size_t val_count)
+ {
+ 	if (val_count == 0)
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -1237,7 +1237,7 @@ int regmap_noinc_read(struct regmap *map
+ 		      void *val, size_t val_len);
+ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
+ 		     size_t val_count);
+-int regmap_multi_reg_read(struct regmap *map, unsigned int *reg, void *val,
++int regmap_multi_reg_read(struct regmap *map, const unsigned int *reg, void *val,
+ 			  size_t val_count);
+ int regmap_update_bits_base(struct regmap *map, unsigned int reg,
+ 			    unsigned int mask, unsigned int val,
