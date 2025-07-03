@@ -23,7 +23,6 @@ define KernelPackage/r8125
   AUTOLOAD:=$(call AutoProbe,r8125,1)
   PROVIDES:=kmod-r8169
   VARIANT:=regular
-  PKG_MAKE_FLAGS += CONFIG_ASPM=n
 endef
 
 define KernelPackage/r8125-rss
@@ -32,6 +31,8 @@ $(call KernelPackage/r8125)
   TITLE+= (RSS)
   VARIANT:=rss
 endef
+
+PKG_MAKE_FLAGS := CONFIG_ASPM=n
 
 ifeq ($(BUILD_VARIANT),rss)
   PKG_MAKE_FLAGS += \
