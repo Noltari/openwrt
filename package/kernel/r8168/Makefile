@@ -40,6 +40,7 @@ endif
 
 define Build/Compile
 	+$(KERNEL_MAKE) $(PKG_JOBS) \
+		$(PKG_MAKE_FLAGS) \
 		M="$(PKG_BUILD_DIR)/src" \
 		modules
 endef
