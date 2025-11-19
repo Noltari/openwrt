@@ -1,0 +1,120 @@
+From e714007ea509db841f02b8018ec70ffefc625094 Mon Sep 17 00:00:00 2001
+From: Jonas Gorski <jonas.gorski@gmail.com>
+Date: Sun, 16 Nov 2025 11:31:09 +0100
+Subject: [PATCH 06/12] net: dsa: b53: fix BCM5325 ARL entry multicast port
+ masks
+
+Signed-off-by: Jonas Gorski <jonas.gorski@gmail.com>
+---
+ drivers/net/dsa/b53/b53_common.c |  4 +++-
+ drivers/net/dsa/b53/b53_priv.h   | 29 ++++++++++++++++++++++-------
+ drivers/net/dsa/b53/b53_regs.h   |  8 ++++++++
+ 3 files changed, 33 insertions(+), 8 deletions(-)
+
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -2169,10 +2169,12 @@ static void b53_arl_search_read_25(struc
+ 				   struct b53_arl_entry *ent)
+ {
+ 	u64 mac_vid;
++	u8 ext;
+ 
++	b53_read8(dev, B53_ARLIO_PAGE, B53_ARL_SRCH_RSLT_EXT_25, & ext);
+ 	b53_read64(dev, B53_ARLIO_PAGE, B53_ARL_SRCH_RSTL_0_MACVID_25,
+ 		   &mac_vid);
+-	b53_arl_search_to_entry_25(ent, mac_vid);
++	b53_arl_search_to_entry_25(ent, mac_vid, ext);
+ }
+ 
+ static void b53_arl_search_read_89(struct b53_device *dev, u8 idx,
+--- a/drivers/net/dsa/b53/b53_priv.h
++++ b/drivers/net/dsa/b53/b53_priv.h
+@@ -344,12 +344,16 @@ static inline void b53_arl_to_entry_25(s
+ 				       u64 mac_vid, u8 vid_entry)
+ {
+ 	memset(ent, 0, sizeof(*ent));
+-	ent->port = (mac_vid >> ARLTBL_DATA_PORT_ID_S_25) &
+-		     ARLTBL_DATA_PORT_ID_MASK_25;
+ 	ent->is_valid = !!(mac_vid & ARLTBL_VALID_25);
+ 	ent->is_age = !!(mac_vid & ARLTBL_AGE_25);
+ 	ent->is_static = !!(mac_vid & ARLTBL_STATIC_25);
+ 	u64_to_ether_addr(mac_vid, ent->mac);
++	if (is_multicast_ether_addr(ent->mac))
++		ent->port = (mac_vid >> ARLTBL_DATA_PORT_ID_S_25) &
++		     ARLTBL_DATA_PORT_MASK_25;
++	else
++		ent->port = (mac_vid >> ARLTBL_DATA_PORT_ID_S_25) &
++		     ARLTBL_DATA_PORT_ID_MASK_25;
+ 	ent->vid = vid_entry;
+ }
+ 
+@@ -383,8 +387,12 @@ static inline void b53_arl_from_entry_25
+ 					 const struct b53_arl_entry *ent)
+ {
+ 	*mac_vid = ether_addr_to_u64(ent->mac);
+-	*mac_vid |= (u64)(ent->port & ARLTBL_DATA_PORT_ID_MASK_25) <<
+-			  ARLTBL_DATA_PORT_ID_S_25;
++	if (is_multicast_ether_addr(ent->mac))
++		*mac_vid |= (u64)(ent->port & ARLTBL_DATA_PORT_MASK_25) <<
++				  ARLTBL_DATA_PORT_ID_S_25;
++	else
++		*mac_vid |= (u64)(ent->port & ARLTBL_DATA_PORT_ID_MASK_25) <<
++				  ARLTBL_DATA_PORT_ID_S_25;
+ 	if (ent->is_valid)
+ 		*mac_vid |= ARLTBL_VALID_25;
+ 	if (ent->is_static)
+@@ -409,17 +417,24 @@ static inline void b53_arl_from_entry_89
+ }
+ 
+ static inline void b53_arl_search_to_entry_25(struct b53_arl_entry *ent,
+-					      u64 mac_vid)
++					      u64 mac_vid, u8 ext)
+ {
+ 	memset(ent, 0, sizeof(*ent));
+-	ent->port = (mac_vid >> ARLTBL_DATA_PORT_ID_S_25) &
+-		     ARLTBL_DATA_PORT_ID_MASK_25;
+ 	ent->is_valid = !!(mac_vid & ARLTBL_VALID_25);
+ 	ent->is_age = !!(mac_vid & ARLTBL_AGE_25);
+ 	ent->is_static = !!(mac_vid & ARLTBL_STATIC_25);
+ 	u64_to_ether_addr(mac_vid, ent->mac);
+ 	ent->vid = (mac_vid >> ARLTBL_SRCH_RSLT_VID_S_25) &
+ 		   ARLTBL_SRCH_RSLT_VID_MASK_25;
++	if (is_multicast_ether_addr(ent->mac)) {
++		ent->port = (mac_vid >> ARLTBL_SRCH_RSLT_PORT_ID_S_25) &
++			     ARLTBL_SRCH_RSLT_PORT_MASK_25;
++		if (ext & ARLTBL_SRCH_RSLT_EXT_MC_MII)
++			ent->port |= BIT(B53_CPU_PORT_25);
++	} else {
++		ent->port = (mac_vid >> ARLTBL_SRCH_RSLT_PORT_ID_S_25) &
++			     ARLTBL_SRCH_RSLT_PORT_ID_MASK_25;
++	}
+ }
+ 
+ static inline void b53_arl_search_to_entry_63xx(struct b53_arl_entry *ent,
+--- a/drivers/net/dsa/b53/b53_regs.h
++++ b/drivers/net/dsa/b53/b53_regs.h
+@@ -328,6 +328,7 @@
+ #define   ARLTBL_VID_MASK		0xfff
+ #define   ARLTBL_DATA_PORT_ID_S_25	48
+ #define   ARLTBL_DATA_PORT_ID_MASK_25	0xf
++#define   ARLTBL_DATA_PORT_MASK_25	0x7f
+ #define   ARLTBL_AGE_25			BIT_ULL(61)
+ #define   ARLTBL_STATIC_25		BIT_ULL(62)
+ #define   ARLTBL_VALID_25		BIT_ULL(63)
+@@ -375,9 +376,16 @@
+ 
+ /* Single register search result on 5325/5365 */
+ #define B53_ARL_SRCH_RSTL_0_MACVID_25	0x24
++#define   ARLTBL_SRCH_RSLT_PORT_ID_S_25	48
++#define   ARLTBL_SRCH_RSLT_PORT_ID_MASK_25	0xf
++#define   ARLTBL_SRCH_RSLT_PORT_MASK_25	0x1f
+ #define   ARLTBL_SRCH_RSLT_VID_S_25	53
+ #define   ARLTBL_SRCH_RSLT_VID_MASK_25	0xff
+ 
++/* BCM5325/5365 Search result extend register (8 bit) */
++#define B53_ARL_SRCH_RSLT_EXT_25	0x2c
++#define   ARLTBL_SRCH_RSLT_EXT_MC_MII	BIT(2)
++
+ /* ARL Search Data Result (32 bit) */
+ #define B53_ARL_SRCH_RSTL_0		0x68
+ 

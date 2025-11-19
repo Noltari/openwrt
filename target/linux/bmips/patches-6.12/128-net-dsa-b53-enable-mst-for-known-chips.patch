@@ -1,0 +1,100 @@
+From 1c61e2ce6e94044231683fbf7cf62c9b7a7d67f5 Mon Sep 17 00:00:00 2001
+From: Jonas Gorski <jonas.gorski@gmail.com>
+Date: Wed, 12 Jul 2023 09:44:12 +0200
+Subject: [PATCH 09/12] net: dsa: b53: enable mst for known chips
+
+Signed-off-by: Jonas Gorski <jonas.gorski@gmail.com>
+---
+ drivers/net/dsa/b53/b53_common.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -3148,6 +3148,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53115_DEVICE_ID,
+ 		.dev_name = "BCM53115",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x11f,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3162,6 +3163,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53125_DEVICE_ID,
+ 		.dev_name = "BCM53125",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1ff,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3176,6 +3178,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53128_DEVICE_ID,
+ 		.dev_name = "BCM53128",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1ff,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3189,6 +3192,7 @@ static const struct b53_chip_data b53_sw
+ 	{
+ 		.chip_id = BCM63XX_DEVICE_ID,
+ 		.dev_name = "BCM63xx",
++		.msts = 16,
+ 		.vlans = 4096,
+ 		.enabled_ports = 0, /* pdata must provide them */
+ 		.arl_bins = 1,
+@@ -3204,6 +3208,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53010_DEVICE_ID,
+ 		.dev_name = "BCM53010",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1bf,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3218,6 +3223,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53011_DEVICE_ID,
+ 		.dev_name = "BCM53011",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1bf,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3232,6 +3238,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53012_DEVICE_ID,
+ 		.dev_name = "BCM53012",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1bf,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3246,6 +3253,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53018_DEVICE_ID,
+ 		.dev_name = "BCM53018",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1bf,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3260,6 +3268,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53019_DEVICE_ID,
+ 		.dev_name = "BCM53019",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1bf,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3274,6 +3283,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM58XX_DEVICE_ID,
+ 		.dev_name = "BCM585xx/586xx/88312",
+ 		.vlans	= 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x1ff,
+ 		.arl_bins = 4,
+ 		.arl_buckets = 1024,
+@@ -3345,6 +3355,7 @@ static const struct b53_chip_data b53_sw
+ 		.chip_id = BCM53134_DEVICE_ID,
+ 		.dev_name = "BCM53134",
+ 		.vlans = 4096,
++		.msts = 8,
+ 		.enabled_ports = 0x12f,
+ 		.imp_port = 8,
+ 		.cpu_port = B53_CPU_PORT,

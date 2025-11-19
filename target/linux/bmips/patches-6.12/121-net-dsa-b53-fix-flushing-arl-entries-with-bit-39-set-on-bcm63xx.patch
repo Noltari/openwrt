@@ -1,0 +1,48 @@
+From 02487af69f8e560075a910bc9a41a86ec3fbfafa Mon Sep 17 00:00:00 2001
+From: Jonas Gorski <jonas.gorski@gmail.com>
+Date: Thu, 18 Sep 2025 20:26:41 +0200
+Subject: [PATCH 02/12] net: dsa: b53: fix flushing arl entries with bit 39 set
+ on bcm63xx
+
+BCM63XX has a hardware bug where fast ageing a port does not remove
+entries with bit 39 set in its MAC address.
+
+To work around this, remove any remaining entries via
+b53_fast_age_port_slow().
+
+TODO: check if just port is affected, or any combination of port and
+other checks.
+
+Signed-off-by: Jonas Gorski <jonas.gorski@gmail.com>
+---
+ drivers/net/dsa/b53/b53_common.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -561,12 +561,24 @@ out:
+ 
+ static int b53_fast_age_port(struct b53_device *dev, int port)
+ {
++	int ret;
++
+ 	if (is5325(dev))
+ 		return b53_fast_age_slow(dev, port, 0, FAST_AGE_PORT);
+ 
+ 	b53_write8(dev, B53_CTRL_PAGE, B53_FAST_AGE_PORT_CTRL, port);
++	ret = b53_flush_arl(dev, FAST_AGE_PORT);
++	if (ret)
++		return ret;
++
++	/* BCM63XX has a HW bug where entries with bit 39 set do not get
++	 * flushed when flushing a specific port, so purge those entries
++	 * via the slow method.
++	 */
++	if (is63xx(dev))
++		ret = b53_fast_age_slow(dev, port, 0, FAST_AGE_PORT);
+ 
+-	return b53_flush_arl(dev, FAST_AGE_PORT);
++	return ret;
+ }
+ 
+ static int b53_fast_age_vlan(struct b53_device *dev, u16 vid)

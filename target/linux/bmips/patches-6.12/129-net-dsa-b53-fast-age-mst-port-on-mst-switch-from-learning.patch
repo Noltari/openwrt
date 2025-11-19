@@ -1,0 +1,104 @@
+From b927ea386a4ca974518fe360829f543c97f50227 Mon Sep 17 00:00:00 2001
+From: Jonas Gorski <jonas.gorski@gmail.com>
+Date: Mon, 27 Oct 2025 16:03:29 +0100
+Subject: [PATCH 10/12] net: dsa: b53: fast age mst port on mst switch from
+ learning+
+
+Signed-off-by: Jonas Gorski <jonas.gorski@gmail.com>
+---
+ drivers/net/dsa/b53/b53_common.c | 38 ++++++++++++++++++++++++++++----
+ drivers/net/dsa/b53/b53_regs.h   |  4 ++++
+ 2 files changed, 38 insertions(+), 4 deletions(-)
+
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -608,6 +608,22 @@ static int b53_fast_age_port_vlan(struct
+ 	return b53_flush_arl(dev, FAST_AGE_PORT | FAST_AGE_VLAN);
+ }
+ 
++static int b53_fast_age_port_mst(struct b53_device *dev, int port, u8 mst)
++{
++	u8 offset;
++
++	b53_write8(dev, B53_CTRL_PAGE, B53_FAST_AGE_PORT_CTRL, port);
++
++	if (is63xx(dev))
++		offset = B53_MST_AGEING_CONTROL_63XX;
++	else
++		offset = B53_MST_AGEING_CONTROL;
++
++	b53_write32(dev, B53_MST_PAGE, offset, BIT(mst));
++
++	return b53_flush_arl(dev, FAST_AGE_PORT | FAST_AGE_STP);
++}
++
+ void b53_imp_vlan_setup(struct dsa_switch *ds, int cpu_port)
+ {
+ 	struct b53_device *dev = ds->priv;
+@@ -2441,7 +2457,7 @@ static int b53_set_mst_state(struct b53_
+ 			     u8 state)
+ {
+ 	u32 mst_table;
+-	u8 hw_state;
++	u8 hw_state, old_state;
+ 
+ 	if (mst > dev->num_msts)
+ 		return -EINVAL;
+@@ -2471,11 +2487,12 @@ static int b53_set_mst_state(struct b53_
+ 	}
+ 
+ 	b53_read32(dev, B53_MST_PAGE, B53_MST_TABLE(mst), &mst_table);
++	old_state = mst_table & MST_PORT_STATE_MASK(port) >> MST_PORT_STATE_OFFSET(port);
+ 	mst_table &= ~MST_PORT_STATE_MASK(port);
+ 	mst_table |= hw_state << MST_PORT_STATE_OFFSET(port);
+ 	b53_write32(dev, B53_MST_PAGE, B53_MST_TABLE(mst), mst_table);
+ 
+-	return 0;
++	return old_state;
+ }
+ 
+ int b53_br_join(struct dsa_switch *ds, int port, struct dsa_bridge bridge,
+@@ -2600,7 +2617,8 @@ int b53_br_set_mst_state(struct dsa_swit
+ 			 const struct switchdev_mst_state *st)
+ {
+ 	struct b53_device *dev = ds->priv;
+-	int i;
++	struct dsa_port *dp = dsa_to_port(ds, port);
++	int ret, i;
+ 
+ 	if (!dev->num_msts)
+ 		return -EOPNOTSUPP;
+@@ -2609,7 +2627,19 @@ int b53_br_set_mst_state(struct dsa_swit
+ 		if (dev->msts[i].msti != st->msti)
+ 			continue;
+ 
+-		return b53_set_mst_state(dev, port, i, st->state);
++		ret = b53_set_mst_state(dev, port, i, st->state);
++		if (ret < 0)
++			return ret;
++
++		if (dp->learning &&
++		    (ret == MST_PORT_LEARN_STATE ||
++		     ret == MST_PORT_FWD_STATE) &&
++		    (st->state == BR_STATE_DISABLED ||
++		     st->state == BR_STATE_BLOCKING ||
++		     st->state == BR_STATE_LISTENING))
++		    b53_fast_age_port_mst(dev, port, i);
++
++		return 0;
+ 	}
+ 
+ 	return -ENOENT;
+--- a/drivers/net/dsa/b53/b53_regs.h
++++ b/drivers/net/dsa/b53/b53_regs.h
+@@ -538,6 +538,10 @@
+ #define B53_MST_CONTROL			0x00
+ #define  MST_CONTROL_802_1_S_EN		BIT(0)
+ 
++/* MST Ageing Control Register (32 bit) */
++#define B53_MST_AGEING_CONTROL		0x02
++#define B53_MST_AGEING_CONTROL_63XX	0x04
++
+ /* MST Table Registers */
+ #define B53_MST_TABLE(mst)		(0x10 + (mst) * 0x4)
+ #define  MST_PORT_STATE_OFFSET(i)	((i) * 3)
