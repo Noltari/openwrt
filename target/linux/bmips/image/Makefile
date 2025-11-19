@@ -364,11 +364,11 @@ define Device/sercomm-nand
 endef
 
 ### Package helpers ###
-ATH9K_PACKAGES := kmod-ath9k kmod-owl-loader wpad-basic-mbedtls
-B43_PACKAGES := kmod-b43 wpad-basic-mbedtls
-RT28_PACKAGES := kmod-rt2800-pci wpad-basic-mbedtls
-USB1_PACKAGES := kmod-usb-ohci kmod-usb-ledtrig-usbport
-USB2_PACKAGES := $(USB1_PACKAGES) kmod-usb2
+ATH9K_PACKAGES := 
+B43_PACKAGES := 
+RT28_PACKAGES := 
+USB1_PACKAGES := 
+USB2_PACKAGES := 
 
 include $(SUBTARGET).mk
 
