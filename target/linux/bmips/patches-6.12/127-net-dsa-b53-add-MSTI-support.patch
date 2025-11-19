@@ -1,0 +1,499 @@
+From 50e358a8badcd540649d2bb1c8bec4cb356107e2 Mon Sep 17 00:00:00 2001
+From: Jonas Gorski <jonas.gorski@gmail.com>
+Date: Thu, 6 Jul 2023 09:04:28 +0200
+Subject: [PATCH 08/12] net: dsa: b53: add MSTI support
+
+Add basic support for MSTI in b53. Number of trees supported depends on
+the switch model.
+
+Keep MST 0 reserved for CIST / non-MST case.
+
+Signed-off-by: Jonas Gorski <jonas.gorski@gmail.com>
+---
+ drivers/net/dsa/b53/b53_common.c | 268 +++++++++++++++++++++++++++----
+ drivers/net/dsa/b53/b53_priv.h   |  13 ++
+ drivers/net/dsa/b53/b53_regs.h   |  25 +++
+ drivers/net/dsa/bcm_sf2.c        |   2 +
+ 4 files changed, 280 insertions(+), 28 deletions(-)
+
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -281,15 +281,19 @@ static void b53_set_vlan_entry(struct b5
+ 		b53_write16(dev, B53_VLAN_PAGE, B53_VLAN_TABLE_ACCESS_65, vid |
+ 			    VTA_RW_STATE_WR | VTA_RW_OP_EN);
+ 	} else {
++		u32 entry = (vlan->untag << VTE_UNTAG_S) | vlan->members;
++
++		if (dev->num_msts > 0)
++			entry |= vlan->mst << VTE_MST_INDEX_S;
++
+ 		b53_write16(dev, B53_ARLIO_PAGE, dev->vta_regs[1], vid);
+-		b53_write32(dev, B53_ARLIO_PAGE, dev->vta_regs[2],
+-			    (vlan->untag << VTE_UNTAG_S) | vlan->members);
++		b53_write32(dev, B53_ARLIO_PAGE, dev->vta_regs[2], entry);
+ 
+ 		b53_do_vlan_op(dev, VTA_CMD_WRITE);
+ 	}
+ 
+-	dev_dbg(dev->ds->dev, "VID: %d, members: 0x%04x, untag: 0x%04x\n",
+-		vid, vlan->members, vlan->untag);
++	dev_dbg(dev->ds->dev, "VID: %d, members: 0x%04x, untag: 0x%04x mst: %02x\n",
++		vid, vlan->members, vlan->untag, vlan->mst);
+ }
+ 
+ static void b53_get_vlan_entry(struct b53_device *dev, u16 vid,
+@@ -328,6 +332,11 @@ static void b53_get_vlan_entry(struct b5
+ 		vlan->members = entry & VTE_MEMBERS;
+ 		vlan->untag = (entry >> VTE_UNTAG_S) & VTE_MEMBERS;
+ 		vlan->valid = true;
++
++		if (dev->num_msts == 8)
++			vlan->mst = (entry & VTE_MST_INDEX_8) >> VTE_MST_INDEX_S;
++		else if (dev->num_msts == 16)
++			vlan->mst = (entry & VTE_MST_INDEX_16) >> VTE_MST_INDEX_S;
+ 	}
+ }
+ 
+@@ -1082,6 +1091,9 @@ static int b53_switch_reset(struct b53_d
+ 	b53_enable_mib(dev);
+ 	b53_enable_stp(dev);
+ 
++	if (dev->num_msts > 0)
++		b53_write16(dev, B53_MST_PAGE, B53_MST_CONTROL, MST_CONTROL_802_1_S_EN);
++
+ 	return b53_flush_arl(dev, FAST_AGE_STATIC);
+ }
+ 
+@@ -1775,6 +1787,51 @@ static int b53_vlan_prepare(struct dsa_s
+ 	return 0;
+ }
+ 
++static void b53_mst_get(struct b53_device *dev, u8 mst, u16 msti)
++{
++
++	if (mst == 0)
++		return;
++
++	dev->msts[mst].refcnt++;
++
++	if (dev->msts[mst].refcnt == 1) {
++		u32 mst_table, cist_table;
++		int i;
++
++		dev->msts[mst].msti = msti;
++
++		b53_read32(dev, B53_MST_PAGE, B53_MST_TABLE(0), &cist_table);
++		b53_read32(dev, B53_MST_PAGE, B53_MST_TABLE(mst), &mst_table);
++		b53_for_each_port(dev, i) {
++			/* there is no field for port 8 */
++			if (i == B53_CPU_PORT)
++				continue;
++
++			mst_table &= ~MST_PORT_STATE_MASK(i);
++
++			/* Bridged ports default to disabled, non bridged follow
++			 * port state as they are not part of the tree
++			*/
++			if (dsa_to_port(dev->ds, i)->bridge)
++				mst_table |= MST_PORT_DIS_STATE << MST_PORT_STATE_OFFSET(i);
++			else
++				mst_table |= cist_table & MST_PORT_STATE_MASK(i);
++		}
++		b53_write32(dev, B53_MST_PAGE, B53_MST_TABLE(mst), mst_table);
++	}
++}
++
++static void b53_mst_put(struct b53_device *dev, u8 mst)
++{
++	if (mst == 0)
++		return;
++
++	dev->msts[mst].refcnt--;
++	if (dev->msts[mst].refcnt == 0)
++		dev->msts[mst].msti = 0;
++}
++
+ int b53_vlan_add(struct dsa_switch *ds, int port,
+ 		 const struct switchdev_obj_port_vlan *vlan,
+ 		 struct netlink_ext_ack *extack)
+@@ -1856,6 +1913,12 @@ int b53_vlan_del(struct dsa_switch *ds,
+ 	if (!dev->vlan_filtering)
+ 		return 0;
+ 
++	/* if this was the last member, drop the mst membership */
++	if (vl->members == 0) {
++		b53_mst_put(dev, vl->mst);
++		vl->mst = 0;
++	}
++
+ 	b53_set_vlan_entry(dev, vlan->vid, vl);
+ 	b53_fast_age_vlan(dev, vlan->vid);
+ 
+@@ -1866,6 +1929,64 @@ int b53_vlan_del(struct dsa_switch *ds,
+ }
+ EXPORT_SYMBOL(b53_vlan_del);
+ 
++int b53_vlan_msti_set(struct dsa_switch *ds, struct dsa_bridge bridge,
++		      const struct switchdev_vlan_msti *msti)
++{
++	struct b53_device *dev = ds->priv;
++	int old_mst, new_mst = -1;
++	struct b53_vlan *vl;
++	int i;
++
++	if (!dev->num_msts)
++		return -EOPNOTSUPP;
++
++	vl = &dev->vlans[msti->vid];
++	b53_get_vlan_entry(dev, msti->vid, vl);
++	old_mst = vl->mst;
++
++	for (i = 0; i < dev->num_msts; i++) {
++		if (dev->msts[i].msti == msti->msti) {
++			new_mst = i;
++			break;
++		}
++	}
++
++	if (old_mst == new_mst) {
++		return 0;
++	}
++
++	/* no existing mst, find an unused one */
++	if (new_mst < 0) {
++		for (i = 1; i < dev->num_msts; i++) {
++			if (dev->msts[i].msti == 0) {
++				new_mst = i;
++				break;
++			}
++		}
++	}
++
++	/* if no empty one found, check if we can reuse the entry */
++	if (new_mst < 0) {
++	       if (old_mst != 0 && dev->msts[old_mst].refcnt == 1) {
++			new_mst = old_mst;
++		} else {
++			return -ENOSPC;
++		}
++	}
++
++	if (vl->mst != new_mst) {
++		vl->mst = new_mst;
++		b53_set_vlan_entry(dev, msti->vid, vl);
++	}
++	b53_fast_age_vlan(dev, msti->vid);
++	
++	b53_mst_put(dev, old_mst);
++	b53_mst_get(dev, new_mst, msti->msti);
++
++	return 0;
++}
++EXPORT_SYMBOL(b53_vlan_msti_set);
++
+ /* Address Resolution Logic routines. Caller must hold &dev->arl_mutex. */
+ static int b53_arl_op_wait(struct b53_device *dev)
+ {
+@@ -2316,6 +2437,47 @@ int b53_mdb_del(struct dsa_switch *ds, i
+ }
+ EXPORT_SYMBOL(b53_mdb_del);
+ 
++static int b53_set_mst_state(struct b53_device *dev, int port, u8 mst,
++			     u8 state)
++{
++	u32 mst_table;
++	u8 hw_state;
++
++	if (mst > dev->num_msts)
++		return -EINVAL;
++
++	if (port == B53_CPU_PORT)
++		return -EINVAL;
++
++	switch (state) {
++	case BR_STATE_DISABLED:
++		hw_state = MST_PORT_DIS_STATE;
++		break;
++	case BR_STATE_LISTENING:
++		hw_state = MST_PORT_LISTEN_STATE;
++		break;
++	case BR_STATE_LEARNING:
++		hw_state = MST_PORT_LEARN_STATE;
++		break;
++	case BR_STATE_FORWARDING:
++		hw_state = MST_PORT_FWD_STATE;
++		break;
++	case BR_STATE_BLOCKING:
++		hw_state = MST_PORT_BLOCK_STATE;
++		break;
++	default:
++		dev_err(dev->ds->dev, "invalid STP state: %d\n", state);
++		return -EINVAL;
++	}
++
++	b53_read32(dev, B53_MST_PAGE, B53_MST_TABLE(mst), &mst_table);
++	mst_table &= ~MST_PORT_STATE_MASK(port);
++	mst_table |= hw_state << MST_PORT_STATE_OFFSET(port);
++	b53_write32(dev, B53_MST_PAGE, B53_MST_TABLE(mst), mst_table);
++
++	return 0;
++}
++
+ int b53_br_join(struct dsa_switch *ds, int port, struct dsa_bridge bridge,
+ 		bool *tx_fwd_offload, struct netlink_ext_ack *extack)
+ {
+@@ -2434,37 +2596,73 @@ void b53_br_leave(struct dsa_switch *ds,
+ }
+ EXPORT_SYMBOL(b53_br_leave);
+ 
++int b53_br_set_mst_state(struct dsa_switch *ds, int port,
++			 const struct switchdev_mst_state *st)
++{
++	struct b53_device *dev = ds->priv;
++	int i;
++
++	if (!dev->num_msts)
++		return -EOPNOTSUPP;
++
++	for (i = 0; i < dev->num_msts; i++) {
++		if (dev->msts[i].msti != st->msti)
++			continue;
++
++		return b53_set_mst_state(dev, port, i, st->state);
++	}
++
++	return -ENOENT;
++}
++EXPORT_SYMBOL(b53_br_set_mst_state);
++
+ void b53_br_set_stp_state(struct dsa_switch *ds, int port, u8 state)
+ {
+ 	struct b53_device *dev = ds->priv;
+ 	u8 hw_state;
+ 	u8 reg;
+ 
+-	switch (state) {
+-	case BR_STATE_DISABLED:
+-		hw_state = PORT_CTRL_DIS_STATE;
+-		break;
+-	case BR_STATE_LISTENING:
+-		hw_state = PORT_CTRL_LISTEN_STATE;
+-		break;
+-	case BR_STATE_LEARNING:
+-		hw_state = PORT_CTRL_LEARN_STATE;
+-		break;
+-	case BR_STATE_FORWARDING:
+-		hw_state = PORT_CTRL_FWD_STATE;
+-		break;
+-	case BR_STATE_BLOCKING:
+-		hw_state = PORT_CTRL_BLOCK_STATE;
+-		break;
+-	default:
+-		dev_err(ds->dev, "invalid STP state: %d\n", state);
+-		return;
+-	}
++	if (dev->num_msts) {
++		int i;
+ 
+-	b53_read8(dev, B53_CTRL_PAGE, B53_PORT_CTRL(port), &reg);
+-	reg &= ~PORT_CTRL_STP_STATE_MASK;
+-	reg |= hw_state;
+-	b53_write8(dev, B53_CTRL_PAGE, B53_PORT_CTRL(port), reg);
++		if (port == B53_CPU_PORT)
++			return;
++
++		/* Update CIST entry */
++		b53_set_mst_state(dev, port, 0, state);
++
++		if (dsa_to_port(dev->ds, port)->bridge)
++			return;
++
++		for (i = 1; i < dev->num_msts; i++)
++			b53_set_mst_state(dev, port, i, state);
++	} else {
++		switch (state) {
++			case BR_STATE_DISABLED:
++				hw_state = PORT_CTRL_DIS_STATE;
++				break;
++			case BR_STATE_LISTENING:
++				hw_state = PORT_CTRL_LISTEN_STATE;
++				break;
++			case BR_STATE_LEARNING:
++				hw_state = PORT_CTRL_LEARN_STATE;
++				break;
++			case BR_STATE_FORWARDING:
++				hw_state = PORT_CTRL_FWD_STATE;
++				break;
++			case BR_STATE_BLOCKING:
++				hw_state = PORT_CTRL_BLOCK_STATE;
++				break;
++			default:
++				dev_err(ds->dev, "invalid STP state: %d\n", state);
++				return;
++
++			b53_read8(dev, B53_CTRL_PAGE, B53_PORT_CTRL(port), &reg);
++			reg &= ~PORT_CTRL_STP_STATE_MASK;
++			reg |= hw_state;
++			b53_write8(dev, B53_CTRL_PAGE, B53_PORT_CTRL(port), reg);
++		}
++	}
+ }
+ EXPORT_SYMBOL(b53_br_set_stp_state);
+ 
+@@ -2787,11 +2985,13 @@ static const struct dsa_switch_ops b53_s
+ 	.port_pre_bridge_flags	= b53_br_flags_pre,
+ 	.port_bridge_flags	= b53_br_flags,
+ 	.port_stp_state_set	= b53_br_set_stp_state,
++	.port_mst_state_set	= b53_br_set_mst_state,
+ 	.port_fast_age		= b53_br_fast_age,
+ 	.port_vlan_fast_age	= b53_br_port_vlan_fast_age,
+ 	.port_vlan_filtering	= b53_vlan_filtering,
+ 	.port_vlan_add		= b53_vlan_add,
+ 	.port_vlan_del		= b53_vlan_del,
++	.vlan_msti_set		= b53_vlan_msti_set,
+ 	.port_fdb_dump		= b53_fdb_dump,
+ 	.port_fdb_add		= b53_fdb_add,
+ 	.port_fdb_del		= b53_fdb_del,
+@@ -2837,6 +3037,7 @@ struct b53_chip_data {
+ 	u8 vta_regs[3];
+ 	u8 arl_bins;
+ 	u16 arl_buckets;
++	u8 msts;
+ 	u8 duplex_reg;
+ 	u8 jumbo_pm_reg;
+ 	u8 jumbo_size_reg;
+@@ -3182,6 +3383,7 @@ static int b53_switch_init(struct b53_de
+ 			dev->num_vlans = chip->vlans;
+ 			dev->num_arl_bins = chip->arl_bins;
+ 			dev->num_arl_buckets = chip->arl_buckets;
++			dev->num_msts = chip->msts;
+ 			dev->arl_ops = chip->arl_ops;
+ 			break;
+ 		}
+@@ -3241,6 +3443,16 @@ static int b53_switch_init(struct b53_de
+ 	if (!dev->vlans)
+ 		return -ENOMEM;
+ 
++	if (dev->num_msts) {
++		dev->msts = devm_kcalloc(dev->dev,
++				         dev->num_msts, sizeof(struct b53_mst),
++					 GFP_KERNEL);
++		if (!dev->num_msts)
++			return -ENOMEM;
++		/* all vlans start out in 0 / CIST */
++		dev->msts[0].refcnt = dev->num_vlans;
++	}
++
+ 	dev->reset_gpio = b53_switch_get_reset_gpio(dev);
+ 	if (dev->reset_gpio >= 0) {
+ 		ret = devm_gpio_request_one(dev->dev, dev->reset_gpio,
+--- a/drivers/net/dsa/b53/b53_priv.h
++++ b/drivers/net/dsa/b53/b53_priv.h
+@@ -126,9 +126,15 @@ struct b53_port {
+ struct b53_vlan {
+ 	u16 members;
+ 	u16 untag;
++	u8 mst;
+ 	bool valid;
+ };
+ 
++struct b53_mst {
++	u16 msti;
++	u16 refcnt;
++};
++
+ struct b53_device {
+ 	struct dsa_switch *ds;
+ 	struct b53_platform_data *pdata;
+@@ -177,6 +183,9 @@ struct b53_device {
+ 	unsigned int num_ports;
+ 	struct b53_port *ports;
+ 
++	unsigned int num_msts;
++	struct b53_mst *msts;
++
+ 	struct b53_pcs pcs[B53_N_PCS];
+ };
+ 
+@@ -505,6 +514,8 @@ int b53_set_ageing_time(struct dsa_switc
+ int b53_br_join(struct dsa_switch *ds, int port, struct dsa_bridge bridge,
+ 		bool *tx_fwd_offload, struct netlink_ext_ack *extack);
+ void b53_br_leave(struct dsa_switch *ds, int port, struct dsa_bridge bridge);
++int b53_br_set_mst_state(struct dsa_switch *ds, int port,
++			 const struct switchdev_mst_state *st);
+ void b53_br_set_stp_state(struct dsa_switch *ds, int port, u8 state);
+ void b53_br_fast_age(struct dsa_switch *ds, int port);
+ int b53_br_port_vlan_fast_age(struct dsa_switch *ds, int port, u16 vid);
+@@ -523,6 +534,8 @@ int b53_vlan_add(struct dsa_switch *ds,
+ 		 struct netlink_ext_ack *extack);
+ int b53_vlan_del(struct dsa_switch *ds, int port,
+ 		 const struct switchdev_obj_port_vlan *vlan);
++int b53_vlan_msti_set(struct dsa_switch *ds, struct dsa_bridge bridge,
++		      const struct switchdev_vlan_msti *msti);
+ int b53_fdb_add(struct dsa_switch *ds, int port,
+ 		const unsigned char *addr, u16 vid,
+ 		struct dsa_db db);
+--- a/drivers/net/dsa/b53/b53_regs.h
++++ b/drivers/net/dsa/b53/b53_regs.h
+@@ -54,6 +54,9 @@
+ /* EAP Registers */
+ #define B53_EAP_PAGE			0x42
+ 
++/* Multiple Spanning Tree Registers */
++#define B53_MST_PAGE			0x43
++
+ /* EEE Control Registers Page */
+ #define B53_EEE_PAGE			0x92
+ 
+@@ -301,6 +304,9 @@
+ #define   VTE_MEMBERS			0x1ff
+ #define   VTE_UNTAG_S			9
+ #define   VTE_UNTAG			(0x1ff << 9)
++#define   VTE_MST_INDEX_S			18
++#define   VTE_MST_INDEX_8		(0x7 << 18)
++#define   VTE_MST_INDEX_16		(0xf << 18)
+ 
+ /*************************************************************************
+  * ARL I/O Registers
+@@ -525,6 +531,25 @@
+ #define B53_VLAN_PORT_DEF_TAG(i)	(0x10 + 2 * (i))
+ 
+ /*************************************************************************
++ * Multiple Spanning Tree Registers
++ *************************************************************************/
++
++/* MST Control Register (8 bit) */
++#define B53_MST_CONTROL			0x00
++#define  MST_CONTROL_802_1_S_EN		BIT(0)
++
++/* MST Table Registers */
++#define B53_MST_TABLE(mst)		(0x10 + (mst) * 0x4)
++#define  MST_PORT_STATE_OFFSET(i)	((i) * 3)
++#define  MST_PORT_STATE_MASK(i)		(0x7u << MST_PORT_STATE_OFFSET(i))
++#define   MST_PORT_STATE_NO_STP		0
++#define   MST_PORT_DIS_STATE		1
++#define   MST_PORT_BLOCK_STATE		2
++#define   MST_PORT_LISTEN_STATE		3
++#define   MST_PORT_LEARN_STATE		4
++#define   MST_PORT_FWD_STATE		5
++
++/*************************************************************************
+  * Jumbo Frame Page Registers
+  *************************************************************************/
+ 
+--- a/drivers/net/dsa/bcm_sf2.c
++++ b/drivers/net/dsa/bcm_sf2.c
+@@ -1241,11 +1241,13 @@ static const struct dsa_switch_ops bcm_s
+ 	.port_pre_bridge_flags	= b53_br_flags_pre,
+ 	.port_bridge_flags	= b53_br_flags,
+ 	.port_stp_state_set	= b53_br_set_stp_state,
++	.port_mst_state_set	= b53_br_set_mst_state,
+ 	.port_fast_age		= b53_br_fast_age,
+ 	.port_vlan_fast_age	= b53_br_port_vlan_fast_age,
+ 	.port_vlan_filtering	= b53_vlan_filtering,
+ 	.port_vlan_add		= b53_vlan_add,
+ 	.port_vlan_del		= b53_vlan_del,
++	.vlan_msti_set		= b53_vlan_msti_set,
+ 	.port_fdb_dump		= b53_fdb_dump,
+ 	.port_fdb_add		= b53_fdb_add,
+ 	.port_fdb_del		= b53_fdb_del,
