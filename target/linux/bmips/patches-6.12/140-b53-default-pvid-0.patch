@@ -1,0 +1,14 @@
+--- a/drivers/net/dsa/b53/b53_common.c
++++ b/drivers/net/dsa/b53/b53_common.c
+@@ -939,10 +939,7 @@ static void b53_enable_stp(struct b53_de
+ 
+ static u16 b53_default_pvid(struct b53_device *dev)
+ {
+-	if (is5325(dev) || is5365(dev))
+-		return 1;
+-	else
+-		return 0;
++	return 0;
+ }
+ 
+ static bool b53_vlan_port_needs_forced_tagged(struct dsa_switch *ds, int port)
